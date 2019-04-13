@@ -1,0 +1,160 @@
+<div class="search-box">
+    <el-row>
+        <el-col :span="3">
+            <el-select v-model="request.group_id" size="small" clearable>
+                <el-option v-for="group in groups" :key="group.group_id" :label="group.group_name" :value="group.group_id"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="3">
+            <el-button @click="create.group_id=request.group_id; createVisible=true" icon="el-icon-plus" size="small" type="primary">创建菜单项
+            </el-button>
+        </el-col>
+    </el-row>
+</div>
+<el-dialog title="创建菜单项" :visible.sync="createVisible">
+    <el-form :model="create" ref="create" v-if="createVisible">
+        <el-form-item label="组名:">
+            <el-select v-model="create.group_id" size="small">
+                <el-option v-for="group in groups" :key="group.group_id" :label="group.group_name" :value="group.group_id"></el-option>
+            </el-select>
+        </el-form-item>
+        <el-form-item label="名称:" prop="item_name">
+            <el-input v-model="create.item_name" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="排序:" prop="display_order">
+            <el-input v-model="create.display_order" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="链接:" prop="url">
+            <el-input v-model="create.url" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="图标:" prop="icon">
+            <el-input v-model="create.icon" auto-complete="off"></el-input>
+        </el-form-item>
+    </el-form>
+    <span slot="footer">
+        <el-button type="primary" @click="do_create">创建</el-button>
+        <el-button @click="createVisible = false; $refs.create.resetFields()">取消</el-button>
+    </span>
+</el-dialog>
+
+<el-dialog title="菜单项编辑" :visible.sync="editVisible">
+    <el-form :model="edit">
+        <el-form-item label="组名:">
+            <el-select v-model="edit.group_id" size="small">
+                <el-option v-for="group in groups" :key="group.group_id" :label="group.group_name" :value="group.group_id"></el-option>
+            </el-select>
+        </el-form-item>
+        <el-form-item label="名称:" prop="item_name">
+            <el-input v-model="edit.item_name" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="排序:" prop="display_order">
+            <el-input v-model="edit.display_order" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="链接:" prop="url">
+            <el-input v-model="edit.url" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="图标:" prop="icon">
+            <el-input v-model="edit.icon" auto-complete="off"></el-input>
+        </el-form-item>
+    </el-form>
+    <div slot="footer">
+        <el-button type="primary" @click="do_edit">保存</el-button>
+        <el-button @click="editVisible=false">取消</el-button>
+    </div>
+</el-dialog>
+<div class="result-box">
+    <el-table :data="response" border size="small">
+        <el-table-column type="index" label="#" width="50"></el-table-column>
+        <el-table-column prop="item_id" label="菜单ID" width="100"></el-table-column>
+        <el-table-column prop="item_name" label="菜单名"></el-table-column>
+        <el-table-column prop="display_order" label="排序"></el-table-column>
+        <el-table-column prop="icon" label="图标"></el-table-column>
+        <el-table-column prop="url" label="链接"></el-table-column>
+        <el-table-column prop="updator_name" label="更新者" width="120"></el-table-column>
+        <el-table-column prop="updated_time" label="更新时间" :formatter="fDate" width="150"></el-table-column>
+        <el-table-column prop="creator_name" label="创建者" width="120"></el-table-column>
+        <el-table-column prop="created_time" label="创建时间" :formatter="fDate" width="150"></el-table-column>
+        <el-table-column fixed="right" label="操作" width="250">
+            <template slot-scope="scope">
+                <el-button @click="show_edit(scope.row)" icon="el-icon-edit" size="mini" plain round>编辑</el-button>
+                <el-button @click="do_delete(scope.row)" icon="el-icon-delete" size="mini" plain round>删除</el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+</div>
+@section('script')
+    <script>
+        vm = new Vue({
+            el: '#app',
+            data: {
+                request: {
+                    group_id: ''
+                },
+                response: [],
+                createVisible: false,
+                create: {
+                    item_name: '',
+                    display_order: 0,
+                    group_id: '',
+                    url: '',
+                    icon: ''
+                },
+
+                editVisible: false,
+                edit: {
+                    item_id: 0,
+                    item_name: '',
+                    display_order: 0,
+                    group_id: '',
+                    url: '',
+                    icon: ''
+                },
+                groups: {},
+                permissions: {}
+            },
+            mounted: function () {
+                this.ajax_get("group/list", function (res) {
+                    this.groups = res;
+                    if (!this.request.group_id) {
+                        this.request.group_id = this.groups[0].group_id;
+                    }
+                });
+            },
+            watch: {
+                request: {
+                    deep: true,
+                    immediate: true,
+                    handler: function () {
+                        this.reload();
+                    }
+                }
+            },
+            methods: {
+                do_create: function () {
+                    this.ajax_post("create", this.create, function (res) {
+                        this.$refs.create.resetFields();
+                        this.createVisible = false;
+                        this.reload();
+                    });
+                },
+                show_edit: function (row) {
+                    this.edit = Object.assign({}, row);
+                    this.editVisible = true;
+                },
+                do_edit: function () {
+                    this.ajax_post("edit", this.edit, function (res) {
+                        this.editVisible = false;
+                        this.reload();
+                    });
+                },
+                do_delete: function (row) {
+                    this.$confirm('delete?').then(function (value) {
+                        this.ajax_post("delete", {item_id: row.item_id}).then(function (res) {
+                            this.reload();
+                        });
+                    }.bind(this));
+                }
+            }
+        });
+    </script>
+@append

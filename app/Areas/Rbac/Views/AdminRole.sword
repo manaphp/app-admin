@@ -1,0 +1,132 @@
+<div class="search-box">
+    <el-row>
+        <el-col :span="2">
+            <el-select filterable v-model="request.admin_id" size="small">
+                <el-option v-for="(name, id) in admins" :key="id" :label="name" :value="id"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="2">
+            <el-button @click="show_edit()" type="primary" round size="small" icon="el-icon-edit">编辑</el-button>
+        </el-col>
+    </el-row>
+</div>
+<el-dialog class="edit-dialog" title="编辑" :visible.sync="editVisible" width="50%">
+    <el-form :model="edit" ref="edit">
+        <el-checkbox-group v-model="edit.role_ids">
+            <el-checkbox v-for="(name,id) in roles" :label="parseInt(id)"
+                         :key="id" style="width: 20%; text-align: left">
+                @{{name}}
+            </el-checkbox>
+        </el-checkbox-group>
+    </el-form>
+    <div slot="footer">
+        <el-button type="primary" @click="do_edit">保存</el-button>
+        <el-button @click="editVisible=false">取消</el-button>
+    </div>
+</el-dialog>
+<el-dialog title="详情" :visible.sync="detailVisible">
+    <el-table :data="detail" border size="small">
+        <el-table-column type="index" label="#" width="50"></el-table-column>
+        <el-table-column prop="id" label="ID" width="100"></el-table-column>
+        <el-table-column prop="admin_id" label="用户ID" with="100"></el-table-column>
+        <el-table-column prop="admin_name" label="用户名" width="100"></el-table-column>
+        <el-table-column prop="role_id" label="角色ID" width="100"></el-table-column>
+        <el-table-column prop="role_name" label="角色名"></el-table-column>
+        <el-table-column prop="creator_id" label="创建者ID"></el-table-column>
+        <el-table-column prop="creator_name" label="创建者"></el-table-column>
+        <el-table-column prop="created_time" label="创建时间" :formatter="fDate" width="150"></el-table-column>
+    </el-table>
+</el-dialog>
+<div class="result-box">
+    <el-table :data="response" border size="small">
+        <el-table-column type="index" label="#" width="50"></el-table-column>
+        <el-table-column prop="id" label="ID" width="100"></el-table-column>
+        <el-table-column label="角色ID" width="100">
+            <template slot-scope="scope"><a :href="'role/?role_id='+scope.row.role_id">@{{scope.row.role_id}}</a>
+            </template>
+        </el-table-column>
+        <el-table-column prop="role.role_name" label="角色名" width="100"></el-table-column>
+        <el-table-column label="用户列表">
+            <template slot-scope="scope">
+                <el-button size="small" v-for="admin in scope.row.admins" :key="index" type="text"
+                           @click.native="request.admin_id = admin.admin_id"
+                           :disabled="request.admin_id == admin.admin_id">
+                    @{{ admin.admin_name }}
+                </el-button>
+            </template>
+        </el-table-column>
+        <el-table-column prop="creator_name" label="创建者" width="200"></el-table-column>
+        <el-table-column prop="created_time" label="创建时间" width="200" :formatter="fDate"></el-table-column>
+    </el-table>
+</div>
+@section('script')
+    <script>
+
+        vm = new Vue({
+            el: '#app',
+            data: {
+                request: {
+                    admin_id: '',
+                    size: 20,
+                    page: 1
+                },
+                response: {},
+
+                editVisible: false,
+                edit: {
+                    admin_id: '',
+                    role_ids: []
+                },
+
+                detailVisible: false,
+                detail: [],
+                admins: [],
+                roles: [],
+            },
+            mounted: function () {
+                this.ajax_get("admin/list", function (res) {
+                    this.admins = res;
+                    if (!this.request.admin_id) {
+                        this.request.admin_id = this._.keys(this.admins)[0];
+                    }
+                    this.reload();
+                });
+            },
+            watch: {
+                request: {
+                    handler: _.debounce(function () {
+                        this.reload();
+                    }, 500),
+                    deep: true
+                }
+            },
+            methods: {
+                show_edit: function () {
+                    this.edit.role_ids = this._.map(this.response, 'role_id');
+                    this.edit.admin_id = this.request.admin_id;
+                    this.editVisible = true;
+                    if (!this.roles.length) {
+                        this.ajax_get("role/list", function (res) {
+                            this.roles = res;
+                            this.editVisible = true;
+                        })
+                    } else {
+                        this.editVisible = true;
+                    }
+                },
+                do_edit: function () {
+                    this.ajax_post("edit", this.edit, function () {
+                        this.editVisible = false;
+                        this.reload();
+                    });
+                },
+                show_detail: function (row) {
+                    this.detailVisible = true;
+                    this.ajax_get("detail?admin_id" + row.admin_id, function (res) {
+                        this.detail = data;
+                    });
+                }
+            }
+        });
+    </script>
+@append

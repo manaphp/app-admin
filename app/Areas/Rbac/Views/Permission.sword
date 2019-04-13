@@ -1,0 +1,117 @@
+<div class="search-box">
+    <el-row>
+        <el-col :span="2">
+            <el-select v-model="filter.path" size="small" placeholder="分组" clearable>
+                <el-option v-for="path in paths" :key="path" :label="path" :value="path"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="3">
+            <el-button round size="small" @click="do_rebuild" type="primary" icon="el-icon-refresh">重新扫描</el-button>
+        </el-col>
+    </el-row>
+</div>
+<el-dialog title="权限编辑" :visible.sync="editVisible">
+    <el-form :model="edit" ref="edit">
+        <el-form-item label="ID:"><div>@{{edit.permission_id}}</div></el-form-item>
+        <el-form-item label="路径:"><div>@{{edit.path}}</div></el-form-item>
+        <el-form-item label="描述:"><el-input v-model="edit.display_name"></el-input></el-form-item>
+    </el-form>
+    <div slot="footer">
+        <el-button type="primary" @click="do_edit">保存</el-button>
+        <el-button @click="editVisible=false">取消</el-button>
+    </div>
+</el-dialog>
+<div class="result-box">
+    <el-table :data="filteredResponse" border size="small">
+        <el-table-column type="index" label="#" width="50"></el-table-column>
+        <el-table-column prop="permission_id" label="ID" width="50"></el-table-column>
+        <el-table-column prop="path" label="路径" width="250"></el-table-column>
+        <el-table-column prop="display_name" label="简述" width="250"></el-table-column>
+        <el-table-column label="角色列表">
+            <template slot-scope="scope">
+                <el-tag size="small" v-for="role in scope.row.roles">@{{role.role_name}}</el-tag>
+            </template>
+        </el-table-column>
+        <el-table-column prop="updated_time" label="重新时间" :formatter="fDate" width="150"></el-table-column>
+        <el-table-column prop="created_time" label="创建时间" :formatter="fDate" width="150"></el-table-column>
+        <el-table-column fixed="right" label="操作" width="200">
+            <template slot-scope="scope">
+                <el-button @click="show_edit(scope.row)" icon="el-icon-edit" size="mini" plain round>编辑</el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+</div>
+@section('script')
+    <script>
+
+        vm = new Vue({
+            el: '#app',
+            data: {
+                request: {},
+                response: {},
+                editVisible: false,
+                edit: {},
+                row: {},
+                paths: [],
+                filter: {
+                    path: '',
+                }
+            },
+            computed: {
+                filteredResponse: function () {
+                    var filter = this.filter;
+                    var permissions = [];
+                    for (var item of this.response) {
+                        if (filter.path !== '' && item.path !== filter.path && item.path.indexOf(filter.path + '/') !== 0 && filter.path !== '/') {
+                            continue;
+                        }
+
+                        permissions.push(item);
+                    }
+
+                    return permissions;
+                }
+            },
+            mounted: function () {
+                this.reload();
+            },
+            methods: {
+                show_edit: function (row) {
+                    this.editVisible = true;
+                    this.row = row;
+                    this.edit = Object.assign({}, row)
+                },
+                do_edit: function () {
+                    this.ajax_post("edit", this.edit, function () {
+                        this.editVisible = false;
+                        this.row = Object.assign(this.row, this.edit);
+                    });
+                },
+                do_rebuild: function () {
+                    this.ajax_post("rebuild", {}, function () {
+                        this.reload();
+                    });
+                }
+            },
+            watch: {
+                response: function (v) {
+                    var paths = [];
+                    for (var item of this.response) {
+                        var count = 0;
+                        for (var item2 of this.response) {
+                            if (item2.path.indexOf(item.path) === 0) {
+                                count++;
+                            }
+                        }
+
+                        if (count > 1) {
+                            paths.push(item.path);
+                        }
+                    }
+                    this.paths = paths;
+                    this.filter.path = '';
+                }
+            }
+        });
+    </script>
+@append

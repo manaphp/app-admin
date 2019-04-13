@@ -1,0 +1,139 @@
+<div class="search-box">
+    <el-row>
+        <el-col :span="2">
+            <el-button @click="createVisible=true" icon="el-icon-plus" size="small" type="primary">新增角色</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-input v-model="request.keyword" placeholder="角色" size="small"></el-input>
+        </el-col>
+    </el-row>
+</div>
+<el-dialog title="新增角色" :visible.sync="createVisible">
+    <el-form :model="create" ref="create">
+        <el-form-item label="编码:" prop="role_name">
+            <el-input v-model="create.role_name" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="名称:" prop="display_name">
+            <el-input v-model="create.display_name" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="启用:" prop="enabled">
+            <el-switch v-model="create.enabled"></el-switch>
+        </el-form-item>
+    </el-form>
+    <span slot="footer">
+        <el-button type="primary" @click="do_create">创建</el-button>
+        <el-button @click="createVisible = false; $refs.create.resetFields()">取消</el-button>
+    </span>
+</el-dialog>
+
+<el-dialog title="角色编辑" :visible.sync="editVisible">
+    <el-form :model="edit">
+        <el-form-item label="ID:"><span text-align="left">@{{ edit.role_id }}</span></el-form-item>
+        <el-form-item label="编码:">
+            <el-input v-model="edit.role_name" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="名称:">
+            <el-input v-model="edit.display_name" auto-complete="off"></el-input>
+        </el-form-item>
+    </el-form>
+    <div slot="footer">
+        <el-button type="primary" @click="do_edit">保存</el-button>
+        <el-button @click="editVisible=false">取消</el-button>
+    </div>
+</el-dialog>
+<div class="result-box">
+    <pager :request="request" :response="response"></pager>
+    <el-table :data="response.items" border size="small">
+        <el-table-column type="index" label="#" width="50"></el-table-column>
+        <el-table-column prop="role_id" label="角色ID" width="100"></el-table-column>
+        <el-table-column prop="role_name" label="角色编码"></el-table-column>
+        <el-table-column prop="display_name" label="角色名"></el-table-column>
+        <el-table-column prop="enabled" :formatter="fEnabled" label="状态" width="100"></el-table-column>
+        <el-table-column prop="updator_name" label="更新者" width="120"></el-table-column>
+        <el-table-column prop="updated_time" label="更新时间" :formatter="fDate" width="150"></el-table-column>
+        <el-table-column prop="creator_name" label="创建者" width="120"></el-table-column>
+        <el-table-column prop="created_time" label="创建时间" :formatter="fDate" width="150"></el-table-column>
+        <el-table-column fixed="right" label="操作" width="200">
+            <template slot-scope="scope">
+                <el-button @click="show_edit(scope.row)" icon="el-icon-edit" size="mini" plain round>编辑</el-button>
+                <el-button v-if="scope.row.enabled" @click.native.prevent="do_disable(scope.row)" size="mini" plain
+                           round>禁用
+                </el-button>
+                <el-button v-if="!scope.row.enabled" @click.native.prevent="do_enable(scope.row)" size="mini" plain
+                           round>启用
+                </el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+    <pager :request="request" :response="response"></pager>
+</div>
+@section('script')
+    <script>
+
+        vm = new Vue({
+            el: '#app',
+            data: {
+                request: {
+                    keyword: '',
+                    size: 20,
+                    page: 1
+                },
+                response: {},
+                createVisible: false,
+                create: {
+                    role_name: '',
+                    display_name: '',
+                    enabled: true
+                },
+
+                editVisible: false,
+                edit: {
+                    role_id: '',
+                    role_name: '',
+                    display_name: ''
+                }
+            },
+            mounted: function () {
+                this.reload();
+            },
+            watch: {
+                request: {
+                    handler: _.debounce(function () {
+                        this.reload();
+                    }, 500),
+                    deep: true
+                }
+            },
+            methods: {
+                do_enable: function (row) {
+                    this.ajax_post("enable", {role_id: row.role_id}, function () {
+                        row.enabled = 1;
+                    });
+                },
+                do_disable: function (row) {
+                    this.ajax_post("disable", {role_id: row.role_id}, function () {
+                        row.enabled = 0;
+                    });
+                },
+
+                do_create: function () {
+                    this.ajax_post("create", this.create, function () {
+                        this.$refs.create.resetFields();
+                        this.createVisible = false;
+                        this.reload();
+                    });
+                },
+                show_edit: function (row) {
+                    this.editVisible = true;
+                    this.edit = Object.assign({}, row);
+                },
+                do_edit: function () {
+                    this.ajax_post("edit", this.edit, function () {
+                        this.editVisible = false;
+                        this.reload();
+                    });
+                }
+            }
+        });
+    </script>
+@append
