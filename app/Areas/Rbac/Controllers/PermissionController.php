@@ -3,6 +3,8 @@
 namespace App\Areas\Rbac\Controllers;
 
 use App\Areas\Rbac\Models\Permission;
+use App\Areas\Rbac\Models\Role;
+use App\Areas\Rbac\Models\RolePermission;
 use ManaPHP\Mvc\Controller;
 use ManaPHP\Utility\Text;
 
@@ -10,19 +12,20 @@ use ManaPHP\Utility\Text;
  * Class RbacPermissionController
  *
  * @package App\Controllers
+ * @property-read \ManaPHP\AuthorizationInterface $authorization
  *
  */
 class PermissionController extends Controller
 {
     public function getAcl()
     {
-        return ['list' => '@index'];
+        return ['list' => '@index', 'delete' => '@edit', 'rebuild' => '@edit'];
     }
 
     public function indexAction()
     {
         return $this->request->isAjax()
-            ? Permission::all(['permission_id?' => input('permission_id', '')], ['with' => ['roles' => 'role_id, role_name']])
+            ? Permission::all(['permission_id?' => input('permission_id', '')], ['with' => ['roles' => 'role_id, role_name, display_name'], 'order' => 'permission_id DESC'])
             : null;
     }
 
@@ -34,17 +37,7 @@ class PermissionController extends Controller
     public function rebuildAction()
     {
         if ($this->request->isPost()) {
-            $controllers = [];
-            foreach ($this->filesystem->glob('@app/Controllers/*Controller.php') as $item) {
-                $controller = str_replace($this->alias->resolve('@app'), $this->alias->resolveNS('@ns.app'), $item);
-                $controllers[] = str_replace('/', '\\', substr($controller, 0, -4));
-            }
-
-            foreach ($this->filesystem->glob('@app/Areas/*/Controllers/*Controller.php') as $item) {
-                $controller = str_replace($this->alias->resolve('@app'), $this->alias->resolveNS('@ns.app'), $item);
-                $controllers[] = str_replace('/', '\\', substr($controller, 0, -4));
-            }
-
+            $controllers = $this->aclBuilder->getControllers();
             $count = 0;
             foreach ($controllers as $controller) {
                 /**@var \ManaPHP\Rest\Controller $controllerInstance */
@@ -59,12 +52,7 @@ class PermissionController extends Controller
                     $controller_name = basename(str_replace('\\', '/', $controller), 'Controller');
                 }
 
-                foreach (get_class_methods($controllerInstance) as $method) {
-                    if ($method[0] === '_' || !preg_match('#^(.*)Action$#', $method, $match)) {
-                        continue;
-                    }
-
-                    $action = $match[1];
+                foreach ($this->aclBuilder->getActions($controller) as $action) {
                     if (isset($acl[$action])) {
                         $roles = $acl[$action];
                         if ($roles[0] === '@' || in_array($acl[$action], ['*', 'guest', 'user', 'admin'], true)) {
@@ -90,12 +78,38 @@ class PermissionController extends Controller
                 }
             }
 
+            foreach (Role::all() as $role) {
+                $permission_ids = RolePermission::values('permission_id', ['role_id' => $role->role_id]);
+                $permissions = Permission::values('path', ['permission_id' => $permission_ids]);
+
+                $role_permissions = $this->authorization->buildAllowed($role->role_name, $permissions);
+                $role->permissions = ',' . implode(',', $role_permissions) . ',';
+                $role->update();
+            }
+
             return ['code' => 0, 'message' => "新增 $count 条"];
         }
     }
 
     public function editAction()
     {
-        return Permission::updateOrNull();
+        return Permission::viewOrUpdate();
+    }
+
+    public function deleteAction()
+    {
+        if (!$this->request->isGet()) {
+            $permission = Permission::get(input('permission_id'));
+            foreach (Role::all(['role_id' => RolePermission::values('role_id', ['permission_id' => $permission->permission_id])]) as $role) {
+                if (strpos($role->permissions, ",$permission->path,") !== false) {
+                    $role->permissions = str_replace(",$permission->path,", ',', $role->permissions);
+                    $role->update();
+                }
+            }
+
+            RolePermission::deleteAll(['permission_id' => $permission->permission_id]);
+
+            return $permission->delete();
+        }
     }
 }

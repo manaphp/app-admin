@@ -2,6 +2,7 @@
 
 namespace App\Areas\Rbac\Controllers;
 
+use App\Areas\Rbac\Models\AdminRole;
 use App\Areas\Rbac\Models\Role;
 use ManaPHP\Mvc\Controller;
 
@@ -9,13 +10,13 @@ class RoleController extends Controller
 {
     public function getAcl()
     {
-        return ['list' => '@index'];
+        return ['list' => '@index', 'enable' => '@edit', 'disable' => '@edit', 'delete' => '@edit', 'create' => '@edit'];
     }
 
     public function indexAction()
     {
         return $this->request->isAjax()
-            ? Role::query()
+            ? Role::select()
                 ->whereContains('role_name', input('keyword', ''))
                 ->orderBy('role_id desc')
                 ->paginate()
@@ -24,26 +25,45 @@ class RoleController extends Controller
 
     public function listAction()
     {
-        return Role::lists([], ['role_id' => 'role_name']);
+        return Role::lists(['display_name', 'role_name']);
     }
 
     public function createAction()
     {
-        return Role::createOrNull();
+        if ($role_name = input('role_name', '')) {
+            $permissions = ',' . implode(',', $this->authorization->buildAllowed($role_name)) . ',';
+        } else {
+            $permissions = '';
+        }
+
+        return Role::viewOrCreate(['permissions' => $permissions]);
     }
 
     public function editAction()
     {
-        return Role::updateOrNull();
+        return Role::viewOrUpdate();
     }
 
     public function disableAction()
     {
-        return Role::updateOrNull(['enabled' => 0]);
+        return Role::viewOrUpdate(['enabled' => 0]);
     }
 
     public function enableAction()
     {
-        return Role::updateOrNull(['enabled' => 1]);
+        return Role::viewOrUpdate(['enabled' => 1]);
+    }
+
+    public function deleteAction()
+    {
+        if (!$this->request->isGet()) {
+            $role = Role::get(input('role_id'));
+
+            if (AdminRole::exists(['role_id' => $role->role_id])) {
+                return '删除失败: 有用户绑定到此角色';
+            }
+
+            return $role->delete();
+        }
     }
 }

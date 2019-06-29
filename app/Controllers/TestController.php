@@ -1,16 +1,18 @@
 <?php
+
 namespace App\Controllers;
 
 use ManaPHP\Mvc\Controller;
 
-class IndexController extends Controller
+class TestController extends Controller
 {
     public function getAcl()
     {
-        return ['index' => 'user'];
+        return ['*' => '*'];
     }
 
     public function indexAction()
     {
+        return 0;
     }
 }

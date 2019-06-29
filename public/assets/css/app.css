@@ -1,5 +1,32 @@
+.right {
+    float: right;
+}
+
+.left {
+    float: left;
+}
+
+.clearfix {
+    *zoom: 1;
+}
+
+.clearfix:before,
+.clearfix:after {
+    display: table;
+    line-height: 0;
+    content: "";
+}
+
+.clearfix:after {
+    clear: both;
+}
+
 .el-pagination {
     text-align: center;
+}
+
+.el-aside {
+    width: 210px !important;
 }
 
 .el-submenu .el-menu-item {
@@ -12,12 +39,20 @@
     line-height: 35px;
 }
 
+.el-submenu__title {
+    padding: 0 10px !important;
+}
+
+.el-submenu .el-menu-item {
+    padding: 0 25px 0 20px !important;
+}
+
 .el-table--small td, .el-table--small th {
     padding: 2px 0;
 }
 
 .el-dialog {
-    width: 30%;
+    width: 600px;
 }
 
 .el-dialog .el-form-item__label {
@@ -38,9 +73,26 @@
 /*}*/
 
 .product-name {
-    margin: 20px 10px 50px;
+    margin: 8px 30px;
+
+}
+
+.product-name span {
+    font-size: 1.1em;
 }
 
 .el-aside {
     min-height: 800px;
+}
+
+.el-header {
+    height: 20px !important;
+}
+
+.el-link.operate {
+    margin-left: 10px;
+}
+
+.search-box .el-date-editor {
+    width: 220px;
 }

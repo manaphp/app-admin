@@ -1,14 +1,8 @@
 <div class="search-box">
-    <el-row>
-        <el-col :span="2">
-            <el-select v-model="request.role_id" size="small" clearable>
-                <el-option v-for="(role_name, role_id) in roles" :key="role_id" :label="role_name" :value="role_id"></el-option>
-            </el-select>
-        </el-col>
-        <el-col :span="2">
-            <el-button @click="show_edit()" type="primary" round size="small" icon="el-icon-edit">编辑</el-button>
-        </el-col>
-    </el-row>
+    <el-button @click="show_edit()" type="primary" size="small" icon="el-icon-edit">编辑</el-button>
+    <el-select v-model="request.role_id" size="small" filterable style="width: 150px">
+        <el-option v-for="role in roles" :key="role.role_id" :label="role.display_name" :value="role.role_id" v-if="role.role_name !== 'admin'"></el-option>
+    </el-select>
 </div>
 <el-dialog class="edit-dialog" title="编辑" :visible.sync="editVisible" width="50%">
     <el-form :model="edit" ref="edit">
@@ -36,9 +30,9 @@
         <el-table-column prop="permission.display_name" label="权限简述"></el-table-column>
         <el-table-column label="角色列表">
             <template slot-scope="scope">
-                <el-button size="small" v-for="role in scope.row.roles" :key="index" type="text"
-                           @click.native="request.role_id = role.role_id" :disabled="request.role_id == role.role_id">
-                    @{{ role.role_name }}
+                <el-button size="small" v-for="role in scope.row.roles" :key="role.role_id" type="text"
+                           @click.native="request.role_id = role.role_id" :disabled="request.role_id == role.role_id" :title="role.role_name">
+                    @{{ role.display_name }}
                 </el-button>
             </template>
         </el-table-column>
@@ -52,7 +46,7 @@
         vm = new Vue({
             el: '#app',
             data: {
-                request: {role_id: ''},
+                request: {role_id: 0},
                 response: [],
 
                 roles: [],
@@ -62,24 +56,15 @@
                     role_name: '',
                     permission_ids: []
                 },
-                permissions: [],
+                permissions: []
             },
             mounted: function () {
                 this.ajax_get("role/list", function (res) {
                     this.roles = res;
                     if (!this.request.role_id) {
-                        this.request.role_id = this._.keys(this.roles)[0];
+                        this.request.role_id = res ? res[0].role_id : 0;
                     }
-                    this.reload();
                 });
-            },
-            watch: {
-                request: {
-                    handler: _.debounce(function () {
-                        this.reload();
-                    }, 500),
-                    deep: true
-                }
             },
             methods: {
                 show_edit: function () {
@@ -94,12 +79,6 @@
                     } else {
                         this.editVisible = true;
                     }
-                },
-                do_edit: function () {
-                    this.ajax_post("save", this.edit, function () {
-                        this.editVisible = false;
-                        this.reload();
-                    });
                 }
             }
         });

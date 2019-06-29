@@ -9,14 +9,13 @@ class GroupController extends Controller
 {
     public function getAcl()
     {
-        return ['list' => '@index'];
+        return ['list' => '@index', 'delete' => '@edit', 'create' => '@edit'];
     }
 
     public function indexAction()
     {
         return $this->request->isAjax()
-            ? Group::query()
-                ->whereSearch(['group_id'])
+            ? Group::search(['group_id'])
                 ->orderBy('display_order DESC, group_id ASC')
                 ->fetch(true)
             : null;
@@ -29,16 +28,16 @@ class GroupController extends Controller
 
     public function createAction()
     {
-        return Group::createOrNull();
+        return Group::viewOrCreate();
     }
 
     public function editAction()
     {
-        return Group::updateOrNull();
+        return Group::viewOrUpdate();
     }
 
     public function deleteAction()
     {
-        return Group::deleteOrNull();
+        return Group::viewOrDelete();
     }
 }

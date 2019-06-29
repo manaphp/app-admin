@@ -27,19 +27,27 @@ class SessionController extends Controller
         }
 
         if ($this->request->isPost()) {
-            if (!$this->configure->debug) {
+            if ($this->configure->debug) {
+                $this->session->remove('captcha');
+            } else {
                 $this->captcha->verify();
             }
 
-            $admin = Admin::first(['admin_name' => input('user_name')]);
-            if (!$admin || $admin->verifyPassword(input('password'))) {
-                return $this->response->setJsonError('account or password is wrong.');
+            $admin = Admin::first(['admin_name' => input('admin_name')]);
+            if (!$admin || !$admin->verifyPassword(input('password'))) {
+                return '账号或密码不正确';
+            }
+
+            if ($admin->status === Admin::STATUS_INIT) {
+                return '账号还未激活';
+            } elseif ($admin->status === Admin::STATUS_LOCKED) {
+                return '账号已锁定';
             }
 
             if ($this->request->has('remember_me')) {
-                $this->cookies->set('user_name', $admin->admin_name, strtotime('1 year'));
+                $this->cookies->set('admin_name', $admin->admin_name, strtotime('1 year'));
             } else {
-                $this->cookies->delete('user_name');
+                $this->cookies->delete('admin_name');
             }
 
             if ($admin->admin_id === 1) {
@@ -52,8 +60,15 @@ class SessionController extends Controller
             $claims = ['admin_id' => $admin->admin_id, 'admin_name' => $admin->admin_name, 'role' => implode(',', $roles)];
             $this->identity->setClaims($claims);
 
+            $session_id = $this->session->getId();
+            if ($admin->session_id && $session_id !== $admin->session_id) {
+                //同一个账号互踢
+               // $this->session->destroy($admin->session_id);
+            }
+
             $admin->login_ip = $this->request->getClientIp();
             $admin->login_time = time();
+            $admin->session_id = $session_id;
             $admin->update();
 
             $adminLoginLog = new AdminLoginLog();
@@ -70,7 +85,7 @@ class SessionController extends Controller
         } else {
             $this->view->setVar('redirect', input('redirect', $this->router->createUrl('/')));
 
-            return $this->view->setVar('user_name', $this->cookies->get('user_name'));
+            return $this->view->setVar('admin_name', $this->cookies->get('admin_name'));
         }
     }
 

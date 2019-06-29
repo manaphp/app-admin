@@ -1,83 +1,60 @@
-@layout(false)
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>ManaPHP Admin</title>
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.7.2/lib/theme-chalk/index.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
-    <style>
-        .login-box {
+<el-row class="change-password-box">
+    <el-form :model="edit" size="small">
+        <h1 align="center">修改密码</h1>
+        <el-input v-model.trim="edit.admin_name" disabled>
+            <template slot="prepend">账 &nbsp;&nbsp;号</template>
+        </el-input>
+        <el-input v-model.trim="edit.old_password" type="password" placeholder="旧密码" autofocus>
+            <template slot="prepend">旧密码</template>
+        </el-input>
+        <el-input v-model.trim="edit.new_password" type="password" placeholder="新密码">
+            <template slot="prepend">新密码</template>
+        </el-input>
+        <el-input v-model.trim="edit.new_password_confirm" type="password" placeholder="确认新密码">
+            <template slot="prepend">新密码</template>
+        </el-input>
+        <el-form-item>
+            <el-button @click="change" type="primary" class="change-password">确认</el-button>
+        </el-form-item>
+    </el-form>
+</el-row>
+@section('css')
+    <style type="text/css">
+        .el-form {
             margin: 10% auto;
-            width: 270px;
+            width: 300px;
         }
 
-        .login-box > div {
-            margin-bottom: 10px;
+        .change-password {
+            display: block;
+            margin: 10px auto;
         }
     </style>
-</head>
-<body>
-<div id="app" class="login-box">
-    <h1 align="center">修改密码</h1>
-    <el-input v-model="request.old_password" type="password" placeholder="旧密码" autofocus>
-        <template slot="prepend">旧密码</template>
-    </el-input>
-    <el-input v-model="request.new_password" type="password" placeholder="新密码">
-        <template slot="prepend">新密码</template>
-    </el-input>
-    <el-input v-model="request.new_password_confirm" type="password" placeholder="确认新密码">
-        <template slot="prepend">新密码</template>
-    </el-input>
-    <el-row>
-        <el-col :span="16">
-            <el-input v-model="request.code" placeholder="验证码">
-                <template slot="prepend">验证码</template>
-            </el-input>
-        </el-col>
-        <el-col :offset="1" :span="7"><img :src="captcha_url"
-                                           @click="request.code=''; captcha_url='captcha'+'?t='+new Date().getTime()" />
-        </el-col>
-    </el-row>
-    <el-button @click="login" style="width:100%" type="primary">确认</el-button>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/element-ui@2.7.2/lib/index.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios@0.18.0/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qs@6.7.0/dist/qs.js"></script>
-<script>
-    Vue.prototype.$axios = axios;
-
-    axios.defaults.baseURL = 'http://www.manaphp.com';
-    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-
-    vm = new Vue({
-        el: '#app',
-        data: {
-            request: {
-                user_name: '',
-                old_password: '',
-                new_password: '',
-                new_password_confirm: '',
-                code: ''
+@append
+@section('script')
+    <script>
+        vm = new Vue({
+            el: '#app',
+            data: {
+                edit: {
+                    admin_name: "<?=di('identity')->getName()?>",
+                    old_password: '',
+                    new_password: '',
+                    new_password_confirm: '',
+                },
             },
-            captcha_url: "captcha"
-        },
-        methods: {
-            login: function () {
-                this.$axios.post(document.location.href, Qs.stringify(this.request)).then(function (res) {
-                    if (res.data.code === 0) {
-                        window.location.href = "/";
-                    } else {
-                        this.$alert(res.data.message);
-                        this.captcha_url = "captcha" + '?t=' + new Date().getTime();
-                    }
-                }.bind(this));
-            },
-        }
-    });
-</script>
-</body>
-</html>
+            methods: {
+                change: function () {
+                    this.$axios.post(document.location.href, Qs.stringify(this.edit)).then(function (res) {
+                        if (res.data.code === 0) {
+                            window.location.href = "/";
+                        } else {
+                            this.$alert(res.data.message);
+                            this.captcha_url = "captcha" + '?t=' + new Date().getTime();
+                        }
+                    }.bind(this));
+                },
+            }
+        });
+    </script>
+@append

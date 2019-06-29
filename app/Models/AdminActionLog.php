@@ -4,29 +4,13 @@ namespace App\Models;
 use ManaPHP\Db\Model;
 
 /**
- * Class AdminActionLog
- * @package App\Models
- *
- * CREATE TABLE `admin_action_log` (
- * `id` int(11) NOT NULL AUTO_INCREMENT,
- * `user_id` int(11) NOT NULL,
- * `user_name` varchar(32) CHARACTER SET ascii NOT NULL,
- * `ip` char(15) CHARACTER SET ascii NOT NULL,
- * `udid` char(16) CHARACTER SET ascii NOT NULL DEFAULT '',
- * `path` varchar(32) CHARACTER SET ascii NOT NULL,
- * `method` varchar(15) CHARACTER SET ascii NOT NULL,
- * `url` varchar(128) NOT NULL,
- * `data` text NOT NULL,
- * `created_time` int(11) NOT NULL,
- * PRIMARY KEY (`id`)
- * ) ENGINE=MyISAM DEFAULT CHARSET=utf8
- *
+ * Class App\Models\AdminActionLog
  */
 class AdminActionLog extends Model
 {
     public $id;
-    public $user_id;
-    public $user_name;
+    public $admin_id;
+    public $admin_name;
     public $client_ip;
     public $client_udid;
     public $path;
@@ -34,4 +18,22 @@ class AdminActionLog extends Model
     public $url;
     public $data;
     public $created_time;
+
+    /**
+     * @param mixed $context
+     *
+     * @return string
+     */
+    public function getSource($context = null)
+    {
+        return 'admin_action_log';
+    }
+
+    /**
+     * @return string
+     */
+    public function getPrimaryKey()
+    {
+        return 'id';
+    }
 }
