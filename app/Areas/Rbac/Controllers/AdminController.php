@@ -9,7 +9,7 @@ class AdminController extends Controller
 {
     public function getAcl()
     {
-        return ['list' => '@index', 'lock' => '@edit', 'active' => '@edit', 'create' => '@edit'];
+        return ['list' => '@index', 'create' => '@index', 'lock' => '@index', 'active' => '@index', 'edit' => '@index'];
     }
 
     public function indexAction()
@@ -37,7 +37,7 @@ class AdminController extends Controller
     public function lockAction()
     {
         if ($this->identity->getId() == input('admin_id')) {
-            return '不能锁定自己';
+            return '涓嶈兘閿佸畾鑷繁';
         }
 
         return Admin::viewOrUpdate(['status' => Admin::STATUS_LOCKED]);

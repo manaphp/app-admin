@@ -10,7 +10,7 @@ class RoleController extends Controller
 {
     public function getAcl()
     {
-        return ['list' => '@index', 'enable' => '@edit', 'disable' => '@edit', 'delete' => '@edit', 'create' => '@edit'];
+        return ['list' => '@index', 'create' => '@index', 'edit' => '@index', 'enable' => '@index', 'disable' => '@index', 'delete' => '@index'];
     }
 
     public function indexAction()
@@ -60,7 +60,7 @@ class RoleController extends Controller
             $role = Role::get(input('role_id'));
 
             if (AdminRole::exists(['role_id' => $role->role_id])) {
-                return 'É¾³ýÊ§°Ü: ÓÐÓÃ»§°ó¶¨µ½´Ë½ÇÉ«';
+                return 'åˆ é™¤å¤±è´¥: æœ‰ç”¨æˆ·ç»‘å®šåˆ°æ­¤è§’è‰²';
             }
 
             return $role->delete();
