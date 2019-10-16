@@ -1,18 +1,18 @@
 <?php
-namespace App\Widgets;
+namespace App\Areas\Menu\Controllers;
 
 use App\Areas\Menu\Models\Group;
+use ManaPHP\Mvc\Controller;
 use ManaPHP\Query;
-use ManaPHP\View\Widget;
 
-/**
- * Class SideMenuWidget
- * @package App\Widgets
- * @property-read \ManaPHP\AuthorizationInterface $authorization
- */
-class SideMenuWidget extends Widget
+class MyController extends Controller
 {
-    public function run($vars = [])
+    public function getAcl()
+    {
+        return ['*' => 'user'];
+    }
+
+    public function indexAction()
     {
         $groups = Group::select(['group_id', 'group_name', 'icon'])
             ->orderBy('display_order DESC, group_id ASC')
@@ -47,10 +47,10 @@ class SideMenuWidget extends Widget
                 continue;
             }
 
-            $group['items'] = $items;
+            $group['items'] = array_values($items);
             $menu[] = $group;
         }
 
-        return ['menu' => $menu];
+        return $menu;
     }
 }

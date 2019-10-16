@@ -2,6 +2,26 @@ Vue.prototype.$axios = axios;
 Vue.prototype.$moment = moment;
 Vue.prototype.$qs = Qs;
 Vue.prototype._ = _;
+Vue.prototype.sessionStorage = window.sessionStorage;
+Vue.prototype.localStorage = window.localStorage;
+Vue.prototype.console = console;
+
+(function () {
+    let urlKey = `last_url_query.${document.location.pathname}`;
+    window.onbeforeunload = (e) => {
+        sessionStorage.setItem(urlKey, document.location.search);
+    };
+
+    if (document.location.search !== '') {
+        return;
+    }
+    let last_url_query = sessionStorage.getItem(urlKey);
+    window.history.replaceState(null, null, last_url_query === null ? '?' : last_url_query);
+}());
+
+
+document.location.query = document.location.search !== '' ? Qs.parse(document.location.search.substr(1)) : {};
+
 //axios.defaults.baseURL = 'http://www.manaphp.com';
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
@@ -25,7 +45,22 @@ axios.interceptors.response.use(function (res) {
         }
 
         if (typeof res.data === 'string') {
-            alert('unexpected response');
+            vm.$alert(res.data, '服务器错误', {customClass: 'error-response'});
+        }
+
+        if (res.data.code === 0) {
+            if (res.data.message) {
+                vm.$message({type: 'success', duration: 1000, message: res.data.message});
+            } else if (res.config.method !== 'get') {
+                vm.$message({type: 'success', duration: 1000, message: '操作成功'});
+            }
+        }
+        
+        for (let name in res.headers) {
+            let value = res.headers[name];
+            if (value.match(/^https?:\/\//)) {
+                console.warn('*'.repeat(32) + ' ' + name + ': ' + value);
+            }
         }
 
         return res;
@@ -64,34 +99,34 @@ Vue.mixin({
 
     methods: {
         ajax_get: function (url, data, success) {
-            if (!success && typeof data === 'object') {
-
-                success = function (res) {
-                    if (_.isArray(data)) {
-                        res.forEach(function (v) {
-                            data.push(v);
-                        })
-                    } else {
-                        Object.keys(res).forEach(function (key) {
-                            data[key] = res[key];
-                        })
-                    }
-                }
-            } else if (typeof data === 'function') {
+            if (typeof data === 'function') {
                 success = data;
                 data = null;
             } else if (data) {
                 url += (url.indexOf('?') === -1 ? '?' : '&') + Qs.stringify(data);
             }
 
-            this.$axios.get(url).then(function (res) {
+            if (success && url.match(/\bcache=[12]\b/) && localStorage.getItem('axios.cache.enabled') !== '0') {
+                var cache_key = 'axios.cache.' + url;
+                let cache_value = sessionStorage.getItem(cache_key);
+                if (cache_value) {
+                    success.bind(this)(JSON.parse(cache_value));
+                    return;
+                }
+            }
+
+            return this.$axios.get(url).then(function (res) {
                 if (res.data.code === 0) {
                     if (success) {
+                        if (cache_key) {
+                            sessionStorage.setItem(cache_key, JSON.stringify(res.data.data));
+                        }
                         success.bind(this)(res.data.data);
                     }
-                } else {
+                } else if (res.data.message) {
                     this.$alert(res.data.message);
                 }
+                return res;
             }.bind(this));
         },
         ajax_post: function (url, data, success) {
@@ -105,7 +140,7 @@ Vue.mixin({
                 config.headers = {'Content-Type': 'multipart/form-data'};
             }
 
-            this.$axios.post(url, data, config).then(function (res) {
+            return this.$axios.post(url, data, config).then(function (res) {
                 if (res.data.code === 0 && success) {
                     success.bind(this)(res.data.data);
                 }
@@ -113,11 +148,17 @@ Vue.mixin({
                 if (res.data.message !== '') {
                     this.$alert(res.data.message);
                 }
+                return res
             }.bind(this));
         },
         reload: function () {
+            if (!this.request || !this.response) {
+                alert('bad reload');
+            }
+
             var qs = this.$qs.stringify(this.request);
             window.history.replaceState(null, null, qs ? ('?' + qs) : '');
+            document.location.query = document.location.search !== '' ? Qs.parse(document.location.search.substr(1)) : {};
             this.response = [];
             this.$axios.get(document.location.href).then(function (res) {
                 if (res.data.code !== 0) {
@@ -137,15 +178,19 @@ Vue.mixin({
         fEnabled: function (row, column, value) {
             return ['禁用', '启用'][value];
         },
-        do_create: function () {
-            this.ajax_post(window.location.pathname + "/create", this.create, function (res) {
+        do_create: function (create) {
+            var success = true;
+            if (typeof create === 'string') {
+                this.$refs[create].validate(valid => success = valid);
+            }
+            success && this.ajax_post(window.location.pathname + "/create", this.create, function (res) {
                 this.createVisible = false;
                 this.$refs.create.resetFields();
                 this.reload();
             });
         },
-        show_edit: function (row) {
-            this.edit = Object.assign({}, row);
+        show_edit: function (row, overwrite = {}) {
+            this.edit = Object.assign({}, row, overwrite);
             this.editVisible = true;
         },
         do_edit: function () {
@@ -172,42 +217,73 @@ Vue.mixin({
             data[key] = row[key];
 
             if (!name) {
-                name = (typeof keys[1] !== 'undefined' && keys[1].indexOf('_name')) ? row[keys[1]] : row[key];
+                name = (keys[1] && keys[1].indexOf('_name')) ? row[keys[1]] : row[key];
             }
 
-            this.$confirm('确认删除 `' + (name ? name : row[key]) + '` ?').then(function (value) {
+            if (window.event.ctrlKey) {
                 this.ajax_post(window.location.pathname + "/delete", data, function (res) {
                     this.reload();
                 });
-            }.bind(this));
-        }
+            } else {
+                this.$confirm('确认删除 `' + (name ? name : row[key]) + '` ?').then(function (value) {
+                    this.ajax_post(window.location.pathname + "/delete", data, function (res) {
+                        this.reload();
+                    });
+                }.bind(this));
+            }
+        },
     },
     created: function () {
-        var qs = this.$qs.parse(document.location.search.substr(1));
-        if (this.request) {
-            for (var k in qs) {
-                var v = qs[k];
+        if (this.$parent) {
+            return;
+        }
 
-                if (typeof this.request[k] === 'number') {
-                    if (v !== '') {
-                        this.request[k] = parseInt(v);
-                    }
-                } else {
-                    this.request[k] = v;
-                }
+        if (this.request && this.response) {
+            let qs = this.$qs.parse(document.location.query);
+            for (let k in qs) {
+                this.request[k] = qs[k];
             }
+
+            this.$watch('request', _.debounce(function () {
+                this.reload();
+            }, 500), {deep: true});
+
+            this.reload();
         }
     }
 });
 
 Vue.component('pager', {
     props: ['request', 'response'],
-    template: ' <el-pagination :current-page="request.page"\n' +
-        '                   :page-size="request.size"\n' +
+    template: ' <el-pagination background :current-page="Number(response.page)"\n' +
+        '                   :page-size="Number(request.size)"\n' +
         '                   :page-sizes="[10,20,25,50,100,500,1000]"\n' +
         '                   @current-change="request.page=$event"\n' +
         '                   @size-change="request.size=$event; request.page=1"\n' +
-        '                   :total="response.count" layout="sizes,total, prev, pager, next"></el-pagination>\n',
+        '                   :total="response.count" layout="sizes,total, prev, pager, next, jumper"></el-pagination>\n',
+    watch: {
+        request: {
+            handler: function () {
+                for (var field in this.request) {
+                    if (field === 'page' || field === 'size') {
+                        continue;
+                    }
+                    if (field in this.last_request && this.last_request[field] != this.request[field]) {
+                        this.response.page = 1;
+                        this.request.page = 1;
+                        this.last_request = Object.assign({}, this.request);
+                        break;
+                    }
+                }
+            },
+            deep: true
+        }
+    },
+    data: function () {
+        return {
+            last_request: Object.assign({}, this.request)
+        }
+    }
 });
 
 Vue.component('date-picker', {
@@ -320,6 +396,59 @@ Vue.component('date-picker', {
                     }
                 ]
             }
+        }
+    }
+});
+
+Vue.component('my-menu', {
+    template: `
+<el-menu :default-active="active" class="el-menu-vertical-demo" :unique-opened="true">
+    <template v-for="group in groups">
+        <el-submenu :index="group.group_name">
+            <template slot="title">
+                <i :class="group.icon"></i>
+                <span>{{group.group_name}}</span>
+            </template>
+            <template v-for="item in group.items ">
+                <el-menu-item :index="item.url"><i :class="item.icon"></i>
+                    <el-link :href="item.url">{{item.item_name}}</el-link>
+                </el-menu-item>
+            </template>
+        </el-submenu>
+     </template>
+</el-menu>`,
+    created() {
+        this.ajax_get('/menu/my?cache=2', function (res) {
+            this.groups = res;
+
+            let active = location.pathname;
+            for (let group of res) {
+                for (let item of group.items) {
+                    if (item.url === active) {
+                        document.title = ' ' + group.group_name + ' - ' + item.item_name;
+                        break;
+                    }
+                }
+            }
+        })
+    },
+    data() {
+        return {
+            active: location.pathname,
+            groups: []
+        }
+    }
+});
+
+Vue.component('axios-cache-switcher', {
+    template: `
+    <div>
+        <div v-if="enabled" @click="localStorage.setItem('axios.cache.enabled','0');enabled=false">缓存 (√)</div>
+        <div v-else @click="localStorage.setItem('axios.cache.enabled','1');enabled=true">缓存 (×)</div>
+    </div>`,
+    data() {
+        return {
+            enabled: localStorage.getItem('axios.cache.enabled') !== '0'
         }
     }
 });

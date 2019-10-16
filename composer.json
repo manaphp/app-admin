@@ -21,8 +21,8 @@
     "post-root-package-install": [
       "php -n -r \"file_exists('.env') || copy('.env.example', '.env');\"",
       "php -n -r \"chmod('manacli', 0755);\"",
-      "php -n -r \"chmod('data', 0777);\"",
-      "php -n -r \"chmod('tmp', 0777);\""
+      "php -n -r \"is_dir('data')||mkdir('data');chmod('data', 0777);\"",
+      "php -n -r \"is_dir('tmp')||mkdir('tmp');chmod('tmp', 0777);\""
     ]
   },
   "config": {

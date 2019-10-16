@@ -8,7 +8,7 @@ class LoginLogController extends Controller
 {
     public function getAcl()
     {
-        return ['latest' => 'user'];
+        return ['*' => '@index', 'latest' => 'user'];
     }
 
     public function indexAction()
@@ -26,7 +26,7 @@ class LoginLogController extends Controller
         return $this->request->isAjax()
             ? AdminLoginLog::select(['login_id', 'client_udid', 'user_agent', 'client_ip', 'created_time'])
                 ->orderBy('login_id DESC')
-                ->where('admin_id', $this->identity->getId())
+                ->where(['admin_id' => $this->identity->getId()])
                 ->paginate()
             : null;
     }
