@@ -20,7 +20,7 @@ script:
 before_deploy:
       - git config --local user.name "Mark"
       - git config --local user.email "manaphp@qq.com"
-      - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%y%m%d')-$(git log --format=%h -1)}
+      - export TRAVIS_TAG=${TRAVIS_TAG:-v1.$(date +'%y%m%d').$(date +'%H%M%S')}
       - git tag $TRAVIS_TAG --force
       - env
       - export RELEASE_NAME=${TRAVIS_REPO_SLUG/\//_}_$TRAVIS_TAG.zip
