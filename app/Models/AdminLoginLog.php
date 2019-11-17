@@ -16,12 +16,7 @@ class AdminLoginLog extends Model
     public $user_agent;
     public $created_time;
 
-    /**
-     * @param mixed $context
-     *
-     * @return string
-     */
-    public function getSource($context = null)
+    public function getTable()
     {
         return 'admin_login_log';
     }

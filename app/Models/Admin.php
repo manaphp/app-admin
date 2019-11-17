@@ -28,12 +28,7 @@ class Admin extends Model
     public $created_time;
     public $updated_time;
 
-    /**
-     * @param mixed $context
-     *
-     * @return string
-     */
-    public function getSource($context = null)
+    public function getTable()
     {
         return 'admin';
     }
