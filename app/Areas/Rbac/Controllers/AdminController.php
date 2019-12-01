@@ -67,25 +67,34 @@ class AdminController extends Controller
 
     public function editAction($role_ids = [])
     {
-        if ($admin = Admin::viewOrUpdate()) {
-            $old_role_ids = AdminRole::values('role_id', ['admin_id' => $admin->admin_id]);
-            foreach (array_diff($old_role_ids, $role_ids) as $role_id) {
-                AdminRole::firstOrFail(['admin_id' => $admin->admin_id, 'role_id' => $role_id])->delete();
-            }
-
-            foreach (array_diff($role_ids, $old_role_ids) as $role_id) {
-                $role = Role::get($role_id);
-                $adminRole = new AdminRole();
-
-                $adminRole->admin_id = $admin->admin_id;
-                $adminRole->admin_name = $admin->admin_name;
-                $adminRole->role_id = $role->role_id;
-                $adminRole->role_name = $role->role_name;
-
-                $adminRole->create();
-            }
+        if (!$this->request->isPost()) {
+            return null;
         }
-		
+
+        $admin = Admin::get(input('admin_id'));
+        $admin->load(['email']);
+        if ($password = input('password', '')) {
+            $admin->password = $password;
+        }
+        $admin->update();
+
+        $old_role_ids = AdminRole::values('role_id', ['admin_id' => $admin->admin_id]);
+        foreach (array_diff($old_role_ids, $role_ids) as $role_id) {
+            AdminRole::firstOrFail(['admin_id' => $admin->admin_id, 'role_id' => $role_id])->delete();
+        }
+
+        foreach (array_diff($role_ids, $old_role_ids) as $role_id) {
+            $role = Role::get($role_id);
+            $adminRole = new AdminRole();
+
+            $adminRole->admin_id = $admin->admin_id;
+            $adminRole->admin_name = $admin->admin_name;
+            $adminRole->role_id = $role->role_id;
+            $adminRole->role_name = $role->role_name;
+
+            $adminRole->create();
+        }
+
         return $admin;
     }
 
