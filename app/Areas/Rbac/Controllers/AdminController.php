@@ -6,25 +6,30 @@ use App\Areas\Rbac\Models\AdminRole;
 use App\Areas\Rbac\Models\Role;
 use App\Models\Admin;
 use ManaPHP\Mvc\Controller;
+use ManaPHP\QueryInterface;
 
 class AdminController extends Controller
 {
+    public function getVerbs()
+    {
+        return array_merge(parent::getVerbs(), [
+            'roles' => 'GET'
+        ]);
+    }
+
     public function indexAction()
     {
-        if ($this->request->isAjax()) {
-            $builder = Admin::select(['admin_id', 'admin_name', 'status', 'login_ip', 'login_time', 'email', 'updator_name', 'creator_name', 'created_time', 'updated_time'])
-                ->orderBy('admin_id DESC')
-                ->with(['roles' => 'role_id, display_name']);
-
-            $keyword = input('keyword', '');
-            if (strpos($keyword, '@') !== false) {
-                $builder->whereContains('email', $keyword);
-            } else {
-                $builder->whereContains(['admin_name', 'email'], $keyword);
-            }
-
-            return $builder->paginate();
-        }
+        return Admin::select(['admin_id', 'admin_name', 'status', 'login_ip', 'login_time', 'email', 'updator_name', 'creator_name', 'created_time', 'updated_time'])
+            ->orderBy(['admin_id' => SORT_DESC])
+            ->with(['roles' => 'role_id, display_name'])
+            ->when(static function (QueryInterface $query) {
+                $keyword = input('keyword', '');
+                if (strpos($keyword, '@') !== false) {
+                    $query->whereContains('email', $keyword);
+                } else {
+                    $query->whereContains(['admin_name', 'email'], $keyword);
+                }
+            })->paginate();
     }
 
     public function listAction()
@@ -38,28 +43,28 @@ class AdminController extends Controller
             return '不能锁定自己';
         }
 
-        return Admin::viewOrUpdate(['status' => Admin::STATUS_LOCKED]);
+        return Admin::rUpdate(['status' => Admin::STATUS_LOCKED]);
     }
 
     public function activeAction()
     {
-        return Admin::viewOrUpdate(['status' => Admin::STATUS_ACTIVE]);
+        return Admin::rUpdate(['status' => Admin::STATUS_ACTIVE]);
     }
 
     public function createAction($role_id)
     {
-        if ($admin = Admin::viewOrCreate()) {
-            if ($role_id) {
-                $role = Role::get($role_id);
+        $admin = Admin::rCreate();
 
-                $adminRole = new AdminRole();
+        if ($role_id) {
+            $role = Role::get($role_id);
 
-                $adminRole->admin_id = $admin->admin_id;
-                $adminRole->admin_name = $admin->admin_name;
-                $adminRole->role_id = $role->role_id;
-                $adminRole->role_name = $role->role_name;
-                $adminRole->create();
-            }
+            $adminRole = new AdminRole();
+
+            $adminRole->admin_id = $admin->admin_id;
+            $adminRole->admin_name = $admin->admin_name;
+            $adminRole->role_id = $role->role_id;
+            $adminRole->role_name = $role->role_name;
+            $adminRole->create();
         }
 
         return $admin;
@@ -67,11 +72,8 @@ class AdminController extends Controller
 
     public function editAction($role_ids = [])
     {
-        if (!$this->request->isPost()) {
-            return null;
-        }
+        $admin = Admin::rGet();
 
-        $admin = Admin::get(input('admin_id'));
         $admin->load(['email']);
         if ($password = input('password', '')) {
             $admin->password = $password;

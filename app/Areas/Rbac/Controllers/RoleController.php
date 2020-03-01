@@ -10,13 +10,11 @@ class RoleController extends Controller
 {
     public function indexAction()
     {
-        return $this->request->isAjax()
-            ? Role::select()
-                ->whereContains('role_name', input('keyword', ''))
-                ->whereNotIn('role_name', ['guest', 'user', 'admin'])
-                ->orderBy('role_id desc')
-                ->paginate()
-            : null;
+        return Role::select()
+            ->whereContains('role_name', input('keyword', ''))
+            ->whereNotIn('role_name', ['guest', 'user', 'admin'])
+            ->orderBy(['role_id' => SORT_DESC])
+            ->paginate();
     }
 
     public function listAction()
@@ -32,34 +30,31 @@ class RoleController extends Controller
             $permissions = '';
         }
 
-        return Role::viewOrCreate(['permissions' => $permissions]);
+        return Role::rCreate(['permissions' => $permissions]);
     }
 
     public function editAction()
     {
-        return Role::viewOrUpdate();
+        return Role::rUpdate();
     }
 
     public function disableAction()
     {
-        return Role::viewOrUpdate(['enabled' => 0]);
+        return Role::rUpdate(['enabled' => 0]);
     }
 
     public function enableAction()
     {
-        return Role::viewOrUpdate(['enabled' => 1]);
+        return Role::rUpdate(['enabled' => 1]);
     }
 
     public function deleteAction()
     {
-        if (!$this->request->isGet()) {
-            $role = Role::get(input('role_id'));
-
-            if (AdminRole::exists(['role_id' => $role->role_id])) {
-                return '删除失败: 有用户绑定到此角色';
-            }
-
-            return $role->delete();
+        $role = Role::rGet();
+        if (AdminRole::exists(['role_id' => $role->role_id])) {
+            return '删除失败: 有用户绑定到此角色';
         }
+
+        return $role->delete();
     }
 }

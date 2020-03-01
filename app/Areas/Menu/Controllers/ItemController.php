@@ -8,21 +8,23 @@ class ItemController extends Controller
 {
     public function indexAction()
     {
-        return Item::viewOrAll(['group_id'], ['order' => ['group_id' => SORT_ASC, 'display_order' => SORT_DESC, 'item_id' => SORT_ASC]]);
+        return Item::search(['group_id'])
+            ->orderBy(['group_id' => SORT_ASC, 'display_order' => SORT_DESC, 'item_id' => SORT_ASC])
+            ->fetch(true);
     }
 
     public function createAction()
     {
-        return Item::viewOrCreate();
+        return Item::rCreate();
     }
 
     public function editAction()
     {
-        return Item::viewOrUpdate();
+        return Item::rUpdate();
     }
 
     public function deleteAction()
     {
-        return Item::viewOrDelete();
+        return Item::rDelete();
     }
 }

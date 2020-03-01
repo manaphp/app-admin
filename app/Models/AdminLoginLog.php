@@ -16,6 +16,9 @@ class AdminLoginLog extends Model
     public $user_agent;
     public $created_time;
 
+    /**
+     * @return string
+     */
     public function getTable()
     {
         return 'admin_login_log';

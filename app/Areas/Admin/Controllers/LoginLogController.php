@@ -11,23 +11,26 @@ class LoginLogController extends Controller
         return ['*' => '@index', 'latest' => 'user'];
     }
 
+    public function getVerbs()
+    {
+        return array_merge(parent::getVerbs(), [
+            'latest' => 'GET'
+        ]);
+    }
+
     public function indexAction()
     {
-        return $this->request->isAjax()
-            ? AdminLoginLog::select(['login_id', 'admin_id', 'admin_name', 'client_udid', 'user_agent', 'client_ip', 'created_time'])
-                ->orderBy('login_id DESC')
-                ->search(['admin_id', 'admin_name*=', 'client_ip', 'client_udid', 'created_time@='])
-                ->paginate()
-            : null;
+        return AdminLoginLog::select(['login_id', 'admin_id', 'admin_name', 'client_udid', 'user_agent', 'client_ip', 'created_time'])
+            ->orderBy(['login_id' => SORT_DESC])
+            ->search(['admin_id', 'admin_name*=', 'client_ip', 'client_udid', 'created_time@='])
+            ->paginate();
     }
 
     public function latestAction()
     {
-        return $this->request->isAjax()
-            ? AdminLoginLog::select(['login_id', 'client_udid', 'user_agent', 'client_ip', 'created_time'])
-                ->orderBy('login_id DESC')
-                ->where(['admin_id' => $this->identity->getId()])
-                ->paginate()
-            : null;
+        return AdminLoginLog::select(['login_id', 'client_udid', 'user_agent', 'client_ip', 'created_time'])
+            ->orderBy(['login_id' => SORT_DESC])
+            ->where(['admin_id' => $this->identity->getId()])
+            ->paginate();
     }
 }

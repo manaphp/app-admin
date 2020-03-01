@@ -28,6 +28,9 @@ class Admin extends Model
     public $created_time;
     public $updated_time;
 
+    /**
+     * @return string
+     */
     public function getTable()
     {
         return 'admin';
@@ -44,7 +47,7 @@ class Admin extends Model
 
     public function relations()
     {
-        return ['roles' => [Role::class, Relation::TYPE_HAS_MANY_VIA, AdminRole::class]];
+        return ['roles' => $this->hasManyToMany(Role::class, AdminRole::class)];
     }
 
     /**
@@ -78,9 +81,9 @@ class Admin extends Model
 
     public function update()
     {
-        if (($password = input('password', ['default' => '', self::PASSWORD_LENGTH])) !== '') {
+        if ($this->hasChanged(['password'])) {
             $this->salt = bin2hex(random_bytes(8));
-            $this->password = $this->hashPassword($password);
+            $this->password = $this->hashPassword($this->password);
         }
 
         return parent::update();

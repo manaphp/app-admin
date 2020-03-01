@@ -11,14 +11,24 @@ class ActionLogController extends Controller
         return ['*' => '@index', 'latest' => 'user', 'detailSelf' => 'user'];
     }
 
+    public function getVerbs()
+    {
+        return array_merge(parent::getVerbs(), [
+            'latest' => 'GET'
+        ]);
+    }
+
     public function indexAction()
     {
-        return AdminActionLog::viewOrPaginate(['admin_name', 'path', 'client_ip', 'created_time@='], ['order' => ['id' => SORT_DESC]]);
+        return AdminActionLog::select()
+            ->search(['admin_name', 'path', 'client_ip', 'created_time@=', 'tag'])
+            ->orderBy(['id' => SORT_DESC])
+            ->paginate();
     }
 
     public function detailAction()
     {
-        $log = AdminActionLog::viewOrFirst();
+        $log = AdminActionLog::rGet();
 
         if ($log->admin_id == $this->identity->getId() || $this->authorization->isAllowed('detail')) {
             return $log;
@@ -29,12 +39,10 @@ class ActionLogController extends Controller
 
     public function latestAction()
     {
-        return $this->request->isAjax()
-            ? AdminActionLog::select(['id', 'client_ip', 'method', 'path', 'url', 'created_time'])
-                ->where(['admin_id' => $this->identity->getId()])
-                ->search(['path', 'client_ip', 'created_time@='])
-                ->orderBy(['id' => SORT_DESC])
-                ->paginate()
-            : null;
+        return AdminActionLog::select()
+            ->where(['admin_id' => $this->identity->getId()])
+            ->search(['path', 'client_ip', 'created_time@=', 'tag'])
+            ->orderBy(['id' => SORT_DESC])
+            ->paginate();
     }
 }

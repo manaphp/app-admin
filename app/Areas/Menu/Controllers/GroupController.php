@@ -9,26 +9,28 @@ class GroupController extends Controller
 {
     public function indexAction()
     {
-        return Group::viewOrAll(['group_id'], ['order' => ['display_order' => SORT_DESC, 'group_id' => SORT_ASC]]);
+        return Group::search(['group_id'])
+            ->orderBy(['display_order' => SORT_DESC, 'group_id' => SORT_ASC])
+            ->fetch(true);
     }
 
     public function listAction()
     {
-        return Group::viewOrAll([], [], ['group_id', 'group_name']);
+        return Group::all([], null, ['group_id', 'group_name']);
     }
 
     public function createAction()
     {
-        return Group::viewOrCreate();
+        return Group::rCreate();
     }
 
     public function editAction()
     {
-        return Group::viewOrUpdate();
+        return Group::rUpdate();
     }
 
     public function deleteAction()
     {
-        return Group::viewOrDelete();
+        return Group::rDelete();
     }
 }

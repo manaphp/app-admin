@@ -11,14 +11,18 @@ class AdminActionLog extends Model
     public $id;
     public $admin_id;
     public $admin_name;
-    public $client_ip;
-    public $client_udid;
-    public $path;
     public $method;
+    public $path;
+    public $tag;
     public $url;
     public $data;
+    public $client_ip;
+    public $client_udid;
     public $created_time;
 
+    /**
+     * @return string
+     */
     public function getTable()
     {
         return 'admin_action_log';
