@@ -1,78 +1,67 @@
-<div class="search-box">
-    <el-button @click="show_edit()" type="primary" size="small" icon="el-icon-edit" >编辑</el-button>
-    <el-select v-model="request.role_id" size="small" filterable style="width: 150px">
-        <el-option v-for="role in roles" :key="role.role_id" :label="role.display_name" :value="String(role.role_id)" v-if="!['guest', 'user', 'admin'].includes(role.role_name)"></el-option>
-    </el-select>
-</div>
-<el-dialog class="edit-dialog" title="编辑" :visible.sync="editVisible" width="50%">
-    <el-form :model="edit" ref="edit">
-        <el-checkbox-group v-model="edit.permission_ids">
-            <el-checkbox v-for="permission in permissions" :label="permission.permission_id"
-                         :key="permission.permission_id" style="width: 20%; text-align: left">
-                @{{permission.display_name}}
-            </el-checkbox>
-        </el-checkbox-group>
-    </el-form>
-    <div slot="footer">
-        <el-button type="primary" @click="do_edit">保存</el-button>
-        <el-button @click="editVisible=false">取消</el-button>
-    </div>
-</el-dialog>
-<div class="result-box">
-    <el-table :data="response" border size="small">
-        <el-table-column type="index" label="#" width="50"></el-table-column>
-        <el-table-column prop="id" label="ID" width="100"></el-table-column>
-        <el-table-column label="权限ID" width="100">
-            <template slot-scope="scope"><a :href="'permission/?permission_id='+scope.row.permission_id">@{{scope.row.permission_id}}</a>
-            </template>
-        </el-table-column>
-        <el-table-column prop="permission.path" label="权限路径" width="200"></el-table-column>
-        <el-table-column label="角色列表" width="300">
-            <template slot-scope="scope">
-                <el-button size="small" v-for="role in scope.row.roles" :key="role.role_id" type="text"
-                           @click.native="request.role_id = role.role_id" :disabled="request.role_id == role.role_id" :title="role.role_name">
-                    @{{ role.display_name }}
-                </el-button>
-            </template>
-        </el-table-column>
-        <el-table-column prop="permission.display_name" label="权限简述" show-overflow-tooltip></el-table-column>
-        <el-table-column prop="creator_name" label="创建者" width="120"></el-table-column>
-        <el-table-column prop="created_time" label="创建时间" :formatter="fDate" width="150"></el-table-column>
-    </el-table>
-</div>
+<request-form>
+    <show-edit></show-edit>
+    <request-select prop="role_id" :data="roles2"></request-select>
+</request-form>
+<edit-form>
+    <el-checkbox-group v-model="edit.permission_ids">
+        <el-checkbox v-for="permission in permissions" :label="permission.permission_id"
+                     :key="permission.permission_id" style="width: 20%; text-align: left">
+            @{{permission.display_name}}
+        </el-checkbox>
+    </el-checkbox-group>
+</edit-form>
+<result-table>
+    <result-index></result-index>
+    <result-id prop="id"></result-id>
+    <result-link prop="permission_id" href="/rbac/permission"></result-link>
+    <result-column prop="permission.path" width="200"></result-column>
+    <result-column prop="roles" width="300" v-slot="{row}">
+        <el-button size="small" v-for="role in row.roles" :key="role.role_id" type="text"
+                   @click.native="request.role_id = role.role_id" :disabled="request.role_id == role.role_id"
+                   :title="role.role_name">
+            @{{ role.display_name }}
+        </el-button>
+    </result-column>
+    <result-column prop="permission.display_name" label="显示名称" show-overflow-tooltip></result-column>
+    <result-account prop="creator_name"></result-account>
+    <result-timestamp prop="created_time"></result-timestamp>
+</result-table>
 
 @section('script')
     <script>
-        vm = new Vue({
-            el: '#app',
+        vm = new App({
             data: {
-                request: {role_id: 0},
+                request: {role_id: ''},
                 response: [],
 
                 roles: [],
-                editVisible: false,
                 edit: {
                     role_id: '',
                     role_name: '',
                     permission_ids: []
                 },
-                permissions: []
+                permissions: [],
+                label: {
+                    permission_id: '权限id',
+                    roles: '角色列表',
+                }
             },
-            mounted: function () {
-                this.ajax_get("role/list", function (res) {
-                    this.roles = res;
-                    if (!this.request.role_id) {
-                        this.request.role_id = res ? res[0].role_id : 0;
-                    }
-                });
+            computed: {
+                roles2() {
+                    let excludes = ['guest', 'user', 'admin'];
+                    return this.roles.filter(v => !excludes.includes(v.role_name));
+                }
+            },
+            mounted() {
+                this.ajax_get("role/list", (res) => this.roles = res);
             },
             methods: {
-                show_edit: function () {
+                show_edit() {
                     this.edit.permission_ids = this._.map(this.response, 'permission_id');
                     this.edit.role_id = this.request.role_id;
 
                     if (!this.permissions.length) {
-                        this.ajax_get("permission/list", function (res) {
+                        this.ajax_get("permission/list", (res) => {
                             this.permissions = res;
                             this.editVisible = true;
                         });

@@ -35,8 +35,7 @@
 @append
 @section('script')
     <script>
-        vm = new Vue({
-            el: '#app',
+        vm = new App({
             data: {
                 edit: {
                     admin_name: "<?=di('identity')->getName()?>",
@@ -46,15 +45,20 @@
                 },
             },
             methods: {
-                change: function () {
-                    this.$axios.post(document.location.href, Qs.stringify(this.edit)).then(function (res) {
+                change() {
+                    this.$axios.post(document.location.href, Qs.stringify(this.edit)).then((res) => {
                         if (res.data.code === 0) {
-                            window.location.href = "/";
+                            window.location.href = BASE_URL;
                         } else {
                             this.$alert(res.data.message);
-                            this.captcha_url = "captcha" + '?t=' + Date.now();
                         }
-                    }.bind(this));
+                    }).catch((error) => {
+                        if (error.response.data.message) {
+                            this.$alert(error.response.data.message, '失败');
+                        } else {
+                            this.$alert(error.response.statusText, '失败');
+                        }
+                    });
                 },
             }
         });

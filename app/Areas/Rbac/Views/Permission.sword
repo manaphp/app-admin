@@ -1,71 +1,49 @@
-<div class="search-box">
-    <el-button size="small" @click="do_rebuild" type="primary" icon="el-icon-refresh" style="width: 100px;">重新扫描</el-button>
-    <el-select v-model="filter.path" size="small" placeholder="分组" clearable filterable style="width: 150px">
-        <el-option v-for="path in paths" :key="path" :label="path" :value="path"></el-option>
-    </el-select>
-</div>
-<el-dialog title="权限编辑" :visible.sync="editVisible">
-    <el-form :model="edit" ref="edit" size="mini">
-        <el-form-item label="ID:">
-            <div>@{{edit.permission_id}}</div>
-        </el-form-item>
-        <el-form-item label="路径:">
-            <div>@{{edit.path}}</div>
-        </el-form-item>
-        <el-form-item label="描述:">
-            <el-input v-model="edit.display_name"></el-input>
-        </el-form-item>
-    </el-form>
-    <div slot="footer">
-        <el-button type="primary" @click="do_edit">保存</el-button>
-        <el-button @click="editVisible=false">取消</el-button>
-    </div>
-</el-dialog>
-<div class="result-box">
-    <el-table :data="filteredResponse" border size="small">
-        <el-table-column type="index" label="#" width="50"></el-table-column>
-        <el-table-column prop="permission_id" label="ID" width="100"></el-table-column>
-        <el-table-column prop="path" label="路径" width="200"></el-table-column>
-        <el-table-column label="角色列表" width="300">
-            <template slot-scope="scope">
-                <el-tag size="small" v-for="role in scope.row.roles" :key="role.role_id">@{{role.display_name}}</el-tag>
-            </template>
-        </el-table-column>
-        <el-table-column prop="display_name" label="简述" show-overflow-tooltip></el-table-column>
-        <el-table-column prop="updated_time" label="重新时间" :formatter="fDate" width="150"></el-table-column>
-        <el-table-column prop="created_time" label="创建时间" :formatter="fDate" width="150"></el-table-column>
-        <el-table-column fixed="right" label="操作" width="150">
-            <template slot-scope="scope">
-                <el-button @click="show_edit(scope.row)" size="mini" type="primary">编辑</el-button>
-                <el-button @click="do_delete(scope.row)" size="mini" type="danger">删除</el-button>
-            </template>
-        </el-table-column>
-    </el-table>
-</div>
+<request-form>
+    <request-button @click="do_rebuild" type="primary" icon="el-icon-refresh">重新扫描</request-button>
+    <selector v-model="filter.path" :data="paths"></selector>
+</request-form>
+<edit-form>
+    <edit-text prop="permission_id" disabled></edit-text>
+    <edit-text prop="path" disabled></edit-text>
+    <edit-text prop="display_name"></edit-text>
+</edit-form>
+<result-table :data="filteredResponse">
+    <result-index></result-index>
+    <result-id prop="permission_id"></result-id>
+    <result-column prop="path" width="200"></result-column>
+    <result-tag prop="roles"></result-tag>
+    <result-column prop="display_name" show-overflow-tooltip></result-column>
+    <result-timestamp prop="updated_time"></result-timestamp>
+    <result-timestamp prop="created_time"></result-timestamp>
+    <result-op show-delete></result-op>
+</result-table>
 @section('script')
     <script>
 
-        vm = new Vue({
-            el: '#app',
+        vm = new App({
             data: {
+                topic: '权限',
                 request: {},
                 response: [],
-                editVisible: false,
                 edit: {},
                 filter: {
                     path: ''
+                },
+                label: {
+                    permission_id: '权限ID',
+                    roles: '角色列表',
                 }
             },
             computed: {
-                filteredResponse: function () {
-                    var filter = this.filter;
+                filteredResponse() {
+                    let filter = this.filter;
 
                     if (!filter.path) {
                         return this.response;
                     }
 
-                    var permissions = [];
-                    for (var item of this.response) {
+                    let permissions = [];
+                    for (let item of this.response) {
                         if (filter.path !== '' && item.path !== filter.path && item.path.indexOf(filter.path + '/') !== 0 && filter.path !== '/') {
                             continue;
                         }
@@ -75,13 +53,13 @@
 
                     return permissions;
                 },
-                paths: function () {
-                    var paths = [];
-                    for (var item of this.response) {
-                        var path = item.path;
-                        var pos = 0;
+                paths() {
+                    let paths = [];
+                    for (let item of this.response) {
+                        let path = item.path;
+                        let pos = 0;
                         while ((pos = path.indexOf('/', pos + 1)) !== -1) {
-                            var sub = path.substring(0, pos);
+                            let sub = path.substring(0, pos);
                             if (paths.indexOf(sub) === -1) {
                                 paths.push(sub);
                             }
@@ -91,10 +69,8 @@
                 }
             },
             methods: {
-                do_rebuild: function () {
-                    this.ajax_post("rebuild", {}, function () {
-                        this.reload();
-                    });
+                do_rebuild() {
+                    this.ajax_post("rebuild", {}, () => this.reload());
                 }
             }
         });

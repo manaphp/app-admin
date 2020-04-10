@@ -28,13 +28,15 @@
     </style>
 </head>
 <body id="particles-js">
+<script>var BASE_URL = '{{base_url()}}';</script>
 <canvas class="background"></canvas>
 <div id="app" class="login-box">
     <h1 align="center">登录</h1>
-    <el-input v-model.trim="request.admin_name" placeholder="用户名" @keyup.enter.native="login" autofocus>
+    <el-input v-model.trim="request.admin_name" placeholder="用户名" @keyup.enter.native="login" ref="admin_name">
         <template slot="prepend">账号</template>
     </el-input>
-    <el-input v-model.trim="request.password" type="password" placeholder="密码" @keyup.enter.native="login">
+    <el-input v-model.trim="request.password" type="password" placeholder="密码" @keyup.enter.native="login"
+              ref="password">
         <template slot="prepend">密码</template>
     </el-input>
     <el-row>
@@ -44,15 +46,20 @@
             </el-input>
         </el-col>
         <el-col :offset="1" :span="7">
-            <img :src="captcha_url"
-                 @click="request.code=''; captcha_url='captcha'+'?t='+Date.now()">
+            <img :src="BASE_URL+'/admin/session/captcha?t='+captcha_timestamp"
+                 @click="request.code=''; captcha_timestamp=Date.now()">
+        </el-col>
+    </el-row>
+    <el-row>
+        <el-col :span="16">
+            <el-checkbox v-model="request.remember_me">记住我</el-checkbox>
         </el-col>
     </el-row>
     <el-button @click="login" style="width:100%" type="primary"
                :disabled="request.admin_name===''||request.password===''">登录
     </el-button>
     <div>
-        <a href="password/forget"><span style="font-size: 0.8em; margin-left: 218px; color: gray;">找回密码</span></a>
+        <a href="/admin/password/forget"><span style="font-size: 0.8em; margin-left: 218px; color: gray;">找回密码</span></a>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.min.js"></script>
@@ -60,39 +67,64 @@
 <script src="https://cdn.jsdelivr.net/npm/axios@0.18.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qs@6.7.0/dist/qs.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/particlesjs@2.2.3/dist/particles.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue-cookies@1.7.0/vue-cookies.min.js"></script>
 <script>
     Vue.prototype.$axios = axios;
 
-    axios.defaults.baseURL = 'http://www.manaphp.com';
     axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-    axios.defaults.validateStatus = function (status) {
-        return true
-    };
 
-    let vm = new Vue({
+    var vm = new Vue({
         el: '#app',
         data: {
             request: {
                 admin_name: '',
                 password: '',
-                code: ''
+                code: '',
+                remember_me: true
             },
-            captcha_url: "captcha"
+            captcha_timestamp: Date.now()
+        },
+        mounted() {
+            this.$cookies.config('30d', document.location.pathname);
+
+            this.request.remember_me = this.$cookies.get('remember_me') !== '0';
+            this.request.admin_name = this.$cookies.get('admin_name');
+
+            if (this.request.admin_name) {
+                this.$refs.password.focus();
+            } else {
+                this.$refs.admin_name.focus();
+            }
         },
         methods: {
-            login: function () {
+            login() {
                 if (this.request.admin_name === '' || this.request.password === '') {
                     return;
                 }
 
                 this.$axios.post(document.location.href, Qs.stringify(this.request)).then((res) => {
                     if (res.data.code === 0) {
+                        if (this.request.remember_me) {
+                            this.$cookies.set('admin_name', this.request.admin_name);
+                            this.$cookies.remove('remember_me');
+                        } else {
+                            this.$cookies.remove('admin_name');
+                            this.$cookies.set('remember_me', '0');
+                        }
+
                         window.location.href = "{{$redirect}}";
                     } else {
-                        this.$alert(res.data.message ? res.data.message : res.data);
-                        this.request.password = '';
                         this.request.code = '';
-                        this.captcha_url = "captcha" + '?t=' + Date.now();
+                        this.captcha_timestamp = Date.now();
+                        this.$alert(res.data.message ? res.data.message : res.data, '失败');
+                    }
+                }).catch((error) => {
+                    this.captcha_timestamp = Date.now();
+
+                    if (error.response.data.message) {
+                        this.$alert(error.response.data.message, '失败');
+                    } else {
+                        this.$alert(error.response.statusText, '失败');
                     }
                 });
             },

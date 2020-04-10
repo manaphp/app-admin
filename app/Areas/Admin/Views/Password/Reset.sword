@@ -25,6 +25,7 @@
     </style>
 </head>
 <body>
+<script>var BASE_URL = '{{base_url()}}';</script>
 <div id="app" class="login-box">
     <h1 align="center">重置密码</h1>
     @if($expired)
@@ -58,14 +59,20 @@
             },
         },
         methods: {
-            reset_pwd: function () {
-                this.$axios.post(document.location.href, Qs.stringify(this.request)).then(function (res) {
+            reset_pwd() {
+                this.$axios.post(document.location.href, Qs.stringify(this.request)).then((res) => {
                     if (res.data.code === 0) {
                         window.location.href = "/";
                     } else {
                         this.$alert(res.data.message);
                     }
-                }.bind(this));
+                }).catch((error) => {
+                    if (error.response.data.message) {
+                        this.$alert(error.response.data.message, '失败');
+                    } else {
+                        this.$alert(error.response.statusText, '失败');
+                    }
+                });
             },
         }
     });

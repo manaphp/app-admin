@@ -12,16 +12,16 @@
     @yield('css')
 </head>
 <body>
-
+<script>var BASE_URL = '{{base_url()}}';</script>
 <el-container id="app" v-cloak>
     {{--    <el-aside style="overflow: hidden">@widget('SideMenu')</el-aside>--}}
     <el-aside style="overflow: hidden">
         <div class="product-name"><el-link href="/">{{$this->configure->name}}</el-link></div>
-        <my-menu/>
+        <my-menu></my-menu>
     </el-aside>
     <el-container>
         <el-header>
-            <span id="server-time" class="left"></span>
+            <system-time></system-time>
             <marquee class="left" width="70%">
                 <el-link href="https://github.com/manaphp">您有新到消息，请注意查收。</el-link>
             </marquee>
@@ -67,22 +67,11 @@
 @yield('script')
 @debugger()
 <script>
-    setInterval(function (diff, $element) {
-        $element.title = diff.toFixed(3);
-        if (Math.abs(diff) >= 2) {
-            $element.style.backgroundColor = 'red';
-        }
-
-        $element.textContent = (moment().add(diff, 'seconds').format('YYYY-MM-DD hh:mm:ss'));
-    }, 1000, {{microtime(true)}} -Date.now() / 1000, document.getElementById('server-time'));
-
-    login_url = '/login';
-
     if (typeof vm === 'undefined') {
-        vm = new Vue({
-            el: '#app'
-        });
+        vm = new App();
     }
+
+    vm.$mount('#app').auto_reload();
 </script>
 </body>
 </html>

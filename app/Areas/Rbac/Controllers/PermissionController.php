@@ -19,12 +19,12 @@ class PermissionController extends Controller
 {
     public function indexAction()
     {
-        return Permission::all(['permission_id?' => input('permission_id', '')], ['with' => ['roles' => 'role_id, role_name, display_name'], 'order' => 'permission_id DESC']);
+        return Permission::all(['permission_id?' => input('permission_id', '')], ['with' => ['roles' => 'role_id, display_name'], 'order' => 'permission_id DESC']);
     }
 
     public function listAction()
     {
-        return Permission::all([], [], ['permission_id', 'path', 'display_name']);
+        return Permission::all([], ['order' => 'path'], ['permission_id', 'path', 'display_name']);
     }
 
     public function rebuildAction()
