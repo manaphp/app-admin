@@ -16,8 +16,8 @@ class LoginLogController extends Controller
     {
         return array_merge(
             parent::getVerbs(), [
-            'latest' => 'GET'
-        ]
+                'latest' => 'GET'
+            ]
         );
     }
 

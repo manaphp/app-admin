@@ -14,8 +14,8 @@ class AdminController extends Controller
     {
         return array_merge(
             parent::getVerbs(), [
-            'roles' => 'GET'
-        ]
+                'roles' => 'GET'
+            ]
         );
     }
 
