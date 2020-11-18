@@ -5,8 +5,8 @@ namespace App\Areas\Rbac\Controllers;
 use App\Areas\Rbac\Models\AdminRole;
 use App\Areas\Rbac\Models\Role;
 use App\Models\Admin;
+use ManaPHP\Data\QueryInterface;
 use ManaPHP\Mvc\Controller;
-use ManaPHP\QueryInterface;
 
 class AdminController extends Controller
 {
@@ -30,7 +30,7 @@ class AdminController extends Controller
             ->when(
                 static function (QueryInterface $query) {
                     $keyword = input('keyword', '');
-                    if (strpos($keyword, '@') !== false) {
+                    if (str_contains($keyword, '@')) {
                         $query->whereContains('email', $keyword);
                     } else {
                         $query->whereContains(['admin_name', 'email'], $keyword);

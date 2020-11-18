@@ -12,7 +12,8 @@ use ManaPHP\Mvc\Controller;
  * Class RbacPermissionController
  *
  * @package App\Controllers
- * @property-read \ManaPHP\AuthorizationInterface $authorization
+ * @property-read \ManaPHP\Http\AuthorizationInterface $authorization
+ * @property-read \ManaPHP\Http\Acl\BuilderInterface   $aclBuilder
  *
  */
 class PermissionController extends Controller
@@ -126,7 +127,7 @@ class PermissionController extends Controller
                 ['role_id' => RolePermission::values('role_id', ['permission_id' => $permission->permission_id])]
             ) as $role
         ) {
-            if (strpos($role->permissions, ",$permission->path,") !== false) {
+            if (str_contains($role->permissions, ",$permission->path,")) {
                 $role->permissions = str_replace(",$permission->path,", ',', $role->permissions);
                 $role->update();
             }

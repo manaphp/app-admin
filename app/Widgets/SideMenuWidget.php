@@ -3,14 +3,14 @@
 namespace App\Widgets;
 
 use App\Areas\Menu\Models\Group;
-use ManaPHP\Query;
-use ManaPHP\View\Widget;
+use ManaPHP\Data\Query;
+use ManaPHP\Mvc\View\Widget;
 
 /**
  * Class SideMenuWidget
  *
  * @package App\Widgets
- * @property-read \ManaPHP\AuthorizationInterface $authorization
+ * @property-read \ManaPHP\Http\AuthorizationInterface $authorization
  */
 class SideMenuWidget extends Widget
 {
