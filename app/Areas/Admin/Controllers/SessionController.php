@@ -4,10 +4,11 @@ namespace App\Areas\Admin\Controllers;
 
 use App\Areas\Rbac\Models\AdminRole;
 use App\Areas\Rbac\Models\Role;
+use App\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\AdminLoginLog;
 use ManaPHP\Helper\Ip;
-use ManaPHP\Mvc\Controller;
+use ManaPHP\Helper\Str;
 
 class SessionController extends Controller
 {
@@ -31,8 +32,7 @@ class SessionController extends Controller
     public function loginAction()
     {
         if (!$udid = $this->cookies->get('CLIENT_UDID')) {
-            $udid = $this->random->getBase(16);
-            $this->cookies->set('CLIENT_UDID', $udid, strtotime('10 year'), '/');
+            $this->cookies->set('CLIENT_UDID', Str::random(16), strtotime('10 year'), '/');
         }
 
         if ($this->configure->env !== 'prod') {
