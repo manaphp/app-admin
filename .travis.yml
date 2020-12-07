@@ -15,7 +15,6 @@ script:
   - flags="--ansi --prefer-dist --no-interaction --optimize-autoloader --no-suggest --no-progress"
   # install dependencies using system provided composer binary
   - composer install $flags
-  - cp .env.example .env
   - composer archive -f zip --file release
 before_deploy:
       - git config --local user.name "Mark"
