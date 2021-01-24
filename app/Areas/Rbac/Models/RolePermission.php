@@ -12,12 +12,12 @@ class RolePermission extends Model
     public $creator_name;
     public $created_time;
 
-    public function getTable()
+    public function table()
     {
         return 'rbac_role_permission';
     }
 
-    public function getSafeFields()
+    public function safeFields()
     {
         return [];
     }
