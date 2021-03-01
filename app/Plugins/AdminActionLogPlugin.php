@@ -11,11 +11,11 @@ class AdminActionLogPluginContext
 }
 
 /**
- * Class AdminActionLogPlugin
- *
- * @package App\Plugins
- *
- * @property-read \App\Plugins\AdminActionLogPluginContext $_context
+ * @property-read \ManaPHP\Identifying\IdentityInterface   $identity
+ * @property-read \ManaPHP\Http\RequestInterface           $request
+ * @property-read \ManaPHP\Http\CookiesInterface           $cookies
+ * @property-read \ManaPHP\Http\DispatcherInterface        $dispatcher
+ * @property-read \App\Plugins\AdminActionLogPluginContext $context
  */
 class AdminActionLogPlugin extends Plugin
 {
@@ -27,12 +27,12 @@ class AdminActionLogPlugin extends Plugin
 
     public function onDbExecuting()
     {
-        if (!$this->_context->logged && $this->dispatcher->isInvoking()) {
+        if (!$this->context->logged && $this->dispatcher->isInvoking()) {
             $this->onAppLogAction();
         }
     }
 
-    protected function _getTag()
+    protected function getTag()
     {
         foreach ($this->request->get() as $k => $v) {
             if (is_numeric($v)) {
@@ -49,7 +49,7 @@ class AdminActionLogPlugin extends Plugin
 
     public function onAppLogAction()
     {
-        $context = $this->_context;
+        $context = $this->context;
         if ($context->logged) {
             return;
         }
@@ -67,7 +67,7 @@ class AdminActionLogPlugin extends Plugin
         $adminActionLog->client_ip = $this->request->getClientIp();
         $adminActionLog->method = $this->request->getMethod();
         $adminActionLog->url = parse_url($this->request->getUri(), PHP_URL_PATH);
-        $adminActionLog->tag = ((int)$this->_getTag()) & 0xFFFFFFFF;
+        $adminActionLog->tag = ((int)$this->getTag()) & 0xFFFFFFFF;
         $adminActionLog->data = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $adminActionLog->path = $this->dispatcher->getPath();
         $adminActionLog->client_udid = $this->cookies->get('CLIENT_UDID');
