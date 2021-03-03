@@ -18,7 +18,7 @@ USE `manaphp`;
 
 /*Table structure for table `admin` */
 
-DROP TABLE IF EXISTS `admin`;
+-- DROP TABLE IF EXISTS `admin`;
 
 CREATE TABLE `admin` (
   `admin_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -49,7 +49,7 @@ insert  into `admin`(`admin_id`,`admin_name`,`status`,`type`,`tag`,`email`,`salt
 
 /*Table structure for table `admin_action_log` */
 
-DROP TABLE IF EXISTS `admin_action_log`;
+-- DROP TABLE IF EXISTS `admin_action_log`;
 
 CREATE TABLE `admin_action_log` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -72,7 +72,7 @@ CREATE TABLE `admin_action_log` (
 
 /*Table structure for table `admin_login_log` */
 
-DROP TABLE IF EXISTS `admin_login_log`;
+-- DROP TABLE IF EXISTS `admin_login_log`;
 
 CREATE TABLE `admin_login_log` (
   `login_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -90,7 +90,7 @@ CREATE TABLE `admin_login_log` (
 
 /*Table structure for table `bos_bucket` */
 
-DROP TABLE IF EXISTS `bos_bucket`;
+-- DROP TABLE IF EXISTS `bos_bucket`;
 
 CREATE TABLE `bos_bucket` (
   `bucket_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -108,7 +108,7 @@ insert  into `bos_bucket`(`bucket_id`,`bucket_name`,`base_url`,`created_time`) v
 
 /*Table structure for table `bos_object` */
 
-DROP TABLE IF EXISTS `bos_object`;
+-- DROP TABLE IF EXISTS `bos_object`;
 
 CREATE TABLE `bos_object` (
   `object_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -134,7 +134,7 @@ CREATE TABLE `bos_object` (
 
 /*Table structure for table `dotenv_log` */
 
-DROP TABLE IF EXISTS `dotenv_log`;
+-- DROP TABLE IF EXISTS `dotenv_log`;
 
 CREATE TABLE `dotenv_log` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -147,7 +147,7 @@ CREATE TABLE `dotenv_log` (
 
 /*Table structure for table `menu_group` */
 
-DROP TABLE IF EXISTS `menu_group`;
+-- DROP TABLE IF EXISTS `menu_group`;
 
 CREATE TABLE `menu_group` (
   `group_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -174,7 +174,7 @@ insert  into `menu_group`(`group_id`,`group_name`,`icon`,`display_order`,`creato
 
 /*Table structure for table `menu_item` */
 
-DROP TABLE IF EXISTS `menu_item`;
+-- DROP TABLE IF EXISTS `menu_item`;
 
 CREATE TABLE `menu_item` (
   `item_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -212,7 +212,7 @@ insert  into `menu_item`(`item_id`,`item_name`,`group_id`,`display_order`,`url`,
 
 /*Table structure for table `metadata_constant` */
 
-DROP TABLE IF EXISTS `metadata_constant`;
+-- DROP TABLE IF EXISTS `metadata_constant`;
 
 CREATE TABLE `metadata_constant` (
   `id` varchar(32) NOT NULL,
@@ -224,7 +224,7 @@ CREATE TABLE `metadata_constant` (
 
 /*Table structure for table `rbac_admin_role` */
 
-DROP TABLE IF EXISTS `rbac_admin_role`;
+-- DROP TABLE IF EXISTS `rbac_admin_role`;
 
 CREATE TABLE `rbac_admin_role` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -242,7 +242,7 @@ CREATE TABLE `rbac_admin_role` (
 
 /*Table structure for table `rbac_permission` */
 
-DROP TABLE IF EXISTS `rbac_permission`;
+-- DROP TABLE IF EXISTS `rbac_permission`;
 
 CREATE TABLE `rbac_permission` (
   `permission_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -258,7 +258,7 @@ CREATE TABLE `rbac_permission` (
 
 /*Table structure for table `rbac_role` */
 
-DROP TABLE IF EXISTS `rbac_role`;
+-- DROP TABLE IF EXISTS `rbac_role`;
 
 CREATE TABLE `rbac_role` (
   `role_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -284,7 +284,7 @@ insert  into `rbac_role`(`role_id`,`role_name`,`display_name`,`enabled`,`permiss
 
 /*Table structure for table `rbac_role_permission` */
 
-DROP TABLE IF EXISTS `rbac_role_permission`;
+-- DROP TABLE IF EXISTS `rbac_role_permission`;
 
 CREATE TABLE `rbac_role_permission` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -300,7 +300,7 @@ CREATE TABLE `rbac_role_permission` (
 
 /*Table structure for table `test` */
 
-DROP TABLE IF EXISTS `test`;
+-- DROP TABLE IF EXISTS `test`;
 
 CREATE TABLE `test` (
   `user_id` int(11) NOT NULL AUTO_INCREMENT,
