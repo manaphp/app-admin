@@ -1,9 +1,12 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Rbac\Models;
 
 use App\Models\Model;
+use ManaPHP\Data\Model\Attribute\Table;
 
+#[Table('rbac_role')]
 class Role extends Model
 {
     public $role_id;
@@ -16,12 +19,7 @@ class Role extends Model
     public $created_time;
     public $updated_time;
 
-    public function table()
-    {
-        return 'rbac_role';
-    }
-
-    public function rules()
+    public function rules(): array
     {
         return [
             'role_name'    => ['lower', 'length' => '3-15', 'unique'],

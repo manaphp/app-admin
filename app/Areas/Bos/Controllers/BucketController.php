@@ -1,12 +1,15 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Bos\Controllers;
 
 use App\Controllers\Controller;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
 /**
  * @property-read \ManaPHP\Bos\ClientInterface $bosClient
  */
+#[Authorize('@index')]
 class BucketController extends Controller
 {
     public function indexAction()

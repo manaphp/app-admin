@@ -1,10 +1,13 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Menu\Controllers;
 
 use App\Areas\Menu\Models\Group;
 use App\Controllers\Controller;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
+#[Authorize('@index')]
 class GroupController extends Controller
 {
     public function indexAction()
@@ -16,21 +19,21 @@ class GroupController extends Controller
 
     public function listAction()
     {
-        return Group::all([], null, ['group_id', 'group_name']);
+        return Group::all([], ['group_id', 'group_name']);
     }
 
-    public function createAction()
+    public function createAction(Group $group)
     {
-        return Group::rCreate();
+        return $group->create();
     }
 
-    public function editAction()
+    public function editAction(Group $group)
     {
-        return Group::rUpdate();
+        return $group->update();
     }
 
-    public function deleteAction()
+    public function deleteAction(Group $group)
     {
-        return Group::rDelete();
+        return $group->delete();
     }
 }

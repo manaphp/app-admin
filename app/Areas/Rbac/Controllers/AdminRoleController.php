@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Rbac\Controllers;
 
@@ -6,7 +7,9 @@ use App\Areas\Rbac\Models\AdminRole;
 use App\Areas\Rbac\Models\Role;
 use App\Controllers\Controller;
 use App\Models\Admin;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
+#[Authorize('@index')]
 class AdminRoleController extends Controller
 {
     public function indexAction()
@@ -37,7 +40,7 @@ class AdminRoleController extends Controller
             $adminRole->admin_id = $admin->admin_id;
             $adminRole->admin_name = $admin->admin_name;
             $adminRole->role_id = $role_id;
-            $adminRole->role_name = Role::value($role_id, 'role_name');
+            $adminRole->role_name = Role::value(['role_id' => $role_id], 'role_name');
 
             $adminRole->create();
         }

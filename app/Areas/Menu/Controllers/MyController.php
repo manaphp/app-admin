@@ -1,25 +1,23 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Menu\Controllers;
 
 use App\Areas\Menu\Models\Group;
 use App\Controllers\Controller;
-use ManaPHP\Data\Query;
+use ManaPHP\Data\QueryInterface;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
+#[Authorize('user')]
 class MyController extends Controller
 {
-    public function getAcl()
-    {
-        return ['*' => 'user'];
-    }
-
     public function indexAction()
     {
         $groups = Group::select(['group_id', 'group_name', 'icon'])
             ->orderBy(['display_order' => SORT_DESC, 'group_id' => SORT_ASC])
             ->with(
                 [
-                    'items' => static function (Query $query) {
+                    'items' => static function (QueryInterface $query) {
                         return $query
                             ->select(['item_id', 'item_name', 'url', 'icon', 'group_id'])
                             ->orderBy('display_order DESC, item_id ASC');
@@ -28,7 +26,6 @@ class MyController extends Controller
             )
             ->all();
 
-        $role = $this->identity->getRole();
         $menu = [];
         foreach ($groups as $group) {
             $items = $group['items'];
@@ -43,7 +40,7 @@ class MyController extends Controller
                     $url = substr($url, 0, $pos);
                 }
 
-                if (!$this->authorization->isAllowed($url, $role)) {
+                if (!$this->authorization->isAllowed($url)) {
                     unset($items[$k]);
                 }
             }

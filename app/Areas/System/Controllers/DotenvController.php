@@ -1,13 +1,16 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\System\Controllers;
 
 use App\Areas\System\Models\DotenvLog;
 use App\Controllers\Controller;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
 /**
- * @property-read \Redis $redisDb
+ * @property-read \ManaPHP\Data\RedisDbInterface $redisDb
  */
+#[Authorize('@index')]
 class DotenvController extends Controller
 {
     const REDIS_KEY = '.env';
@@ -40,7 +43,7 @@ class DotenvController extends Controller
         $env = input('env');
 
         if ($this->redisDb->hExists(self::REDIS_KEY, $app_id)) {
-            return sprintf("${app_id}已存在");
+            return "${app_id}已存在";
         }
 
         $dotenvLog = new DotenvLog();
@@ -59,7 +62,7 @@ class DotenvController extends Controller
         $env = input('env');
 
         if (!$this->redisDb->hExists(self::REDIS_KEY, $app_id)) {
-            return sprintf("${app_id}不存在");
+            return "${app_id}不存在";
         }
 
         if ($this->redisDb->hGet(self::REDIS_KEY, $app_id) === $env) {

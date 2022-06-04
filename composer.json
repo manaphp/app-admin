@@ -2,10 +2,13 @@
   "name": "manaphp/app-admin",
   "description": "ManaPHP Admin Application",
   "type": "project",
-  "require": {
-    "manaphp/framework": "dev-master"
-  },
   "license": "MIT",
+  "keywords": [
+    "manaphp",
+    "framework",
+    "di"
+  ],
+  "homepage": "https://github.com/manaphp/app-admin",
   "authors": [
     {
       "name": "ManaPHP Mark",
@@ -35,5 +38,10 @@
       "!vendor",
       ".travis.yml"
     ]
+  },
+  "require": {
+    "php": ">=8.0.2",
+    "ext-json": "*",
+    "manaphp/framework": "dev-master"
   }
 }

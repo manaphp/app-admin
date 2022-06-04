@@ -10,9 +10,7 @@ ManaPHP 支持三种执行方式: 传统模式(Apache/FPM)、常驻内存模式�
 
 ## 环境要求
 
-* PHP >= 5.5.0
-* Swoole >= 1.9.5 (常驻内存模式)
-* Swoole >= 4.2.9 (协程模式)
+* PHP >= 8.0.2
 
 ## 安装
 
@@ -24,12 +22,8 @@ ManaPHP 支持三种执行方式: 传统模式(Apache/FPM)、常驻内存模式�
 ### composer
 
 ```bash
-composer  create-project manaphp/app-admin app-admin
+composer  create-project manaphp/app-api app-api
 ```
-
-## 开发文档
-
-http://docs.manaphp.com/
 
 ## 技术交流
 

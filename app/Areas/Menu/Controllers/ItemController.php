@@ -1,10 +1,13 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Menu\Controllers;
 
 use App\Areas\Menu\Models\Item;
 use App\Controllers\Controller;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
+#[Authorize('@index')]
 class ItemController extends Controller
 {
     public function indexAction()
@@ -14,18 +17,18 @@ class ItemController extends Controller
             ->all();
     }
 
-    public function createAction()
+    public function createAction(Item $item)
     {
-        return Item::rCreate();
+        return $item->create();
     }
 
-    public function editAction()
+    public function editAction(Item $item)
     {
-        return Item::rUpdate();
+        return $item->update();
     }
 
-    public function deleteAction()
+    public function deleteAction(Item $item)
     {
-        return Item::rDelete();
+        return $item->delete();
     }
 }

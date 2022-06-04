@@ -1,26 +1,16 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Admin\Controllers;
 
 use App\Controllers\Controller;
 use App\Models\AdminActionLog;
+use ManaPHP\Http\Controller\Attribute\AcceptVerbs;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
 class ActionLogController extends Controller
 {
-    public function getAcl()
-    {
-        return ['*' => '@index', 'latest' => 'user', 'detailSelf' => 'user'];
-    }
-
-    public function getVerbs()
-    {
-        return array_merge(
-            parent::getVerbs(), [
-                'latest' => 'GET'
-            ]
-        );
-    }
-
+    #[Authorize]
     public function indexAction()
     {
         return AdminActionLog::select()
@@ -29,17 +19,18 @@ class ActionLogController extends Controller
             ->paginate();
     }
 
-    public function detailAction()
+    #[Authorize('user')]
+    public function detailAction(AdminActionLog $adminActionLog)
     {
-        $log = AdminActionLog::rGet();
-
-        if ($log->admin_id == $this->identity->getId() || $this->authorization->isAllowed('detail')) {
-            return $log;
+        if ($adminActionLog->admin_id == $this->identity->getId() || $this->authorization->isAllowed('detail')) {
+            return $adminActionLog;
         } else {
             return '没有权限';
         }
     }
 
+    #[AcceptVerbs(['GET'])]
+    #[Authorize('user')]
     public function latestAction()
     {
         return AdminActionLog::select()

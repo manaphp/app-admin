@@ -1,13 +1,16 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Bos\Controllers;
 
 use App\Controllers\Controller;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 use Throwable;
 
 /**
  * @property-read \ManaPHP\Bos\ClientInterface $bosClient
  */
+#[Authorize('@index')]
 class ObjectController extends Controller
 {
     public function bucketsAction()

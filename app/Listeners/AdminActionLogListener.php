@@ -1,31 +1,28 @@
 <?php
+declare(strict_types=1);
 
-namespace App\Plugins;
+namespace App\Listeners;
 
 use App\Models\AdminActionLog;
+use ManaPHP\Event\Listener;
 use ManaPHP\Helper\Arr;
 
-class AdminActionLogPluginContext
-{
-    public $logged = false;
-}
-
 /**
- * @property-read \ManaPHP\Identifying\IdentityInterface   $identity
- * @property-read \ManaPHP\Http\RequestInterface           $request
- * @property-read \ManaPHP\Http\CookiesInterface           $cookies
- * @property-read \ManaPHP\Http\DispatcherInterface        $dispatcher
- * @property-read \App\Plugins\AdminActionLogPluginContext $context
+ * @property-read \ManaPHP\Identifying\IdentityInterface       $identity
+ * @property-read \ManaPHP\Http\RequestInterface               $request
+ * @property-read \ManaPHP\Http\CookiesInterface               $cookies
+ * @property-read \ManaPHP\Http\DispatcherInterface            $dispatcher
+ * @property-read \App\Listeners\AdminActionLogListenerContext $context
  */
-class AdminActionLogPlugin extends Plugin
+class AdminActionLogListener extends Listener
 {
-    public function __construct()
+    public function listen(): void
     {
         $this->attachEvent('app:logAction', [$this, 'onAppLogAction']);
         $this->attachEvent('db:executing', [$this, 'onDbExecuting']);
     }
 
-    public function onDbExecuting()
+    public function onDbExecuting(): void
     {
         if (!$this->context->logged && $this->dispatcher->isInvoking()) {
             $this->onAppLogAction();
@@ -34,7 +31,7 @@ class AdminActionLogPlugin extends Plugin
 
     protected function getTag()
     {
-        foreach ($this->request->get() as $k => $v) {
+        foreach ($this->request->all() as $k => $v) {
             if (is_numeric($v)) {
                 if ($k === 'id') {
                     return $v;
@@ -47,7 +44,7 @@ class AdminActionLogPlugin extends Plugin
         return 0;
     }
 
-    public function onAppLogAction()
+    public function onAppLogAction(): void
     {
         $context = $this->context;
         if ($context->logged) {
@@ -55,7 +52,7 @@ class AdminActionLogPlugin extends Plugin
         }
         $context->logged = true;
 
-        $data = Arr::except($this->request->get(), ['_url']);
+        $data = Arr::except($this->request->all(), ['_url']);
         if (isset($data['password'])) {
             $data['password'] = '*';
         }

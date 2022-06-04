@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Rbac\Controllers;
 
@@ -7,18 +8,12 @@ use App\Areas\Rbac\Models\Role;
 use App\Controllers\Controller;
 use App\Models\Admin;
 use ManaPHP\Data\QueryInterface;
+use ManaPHP\Http\Controller\Attribute\AcceptVerbs;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
+#[Authorize('@index')]
 class AdminController extends Controller
 {
-    public function getVerbs()
-    {
-        return array_merge(
-            parent::getVerbs(), [
-                'roles' => 'GET'
-            ]
-        );
-    }
-
     public function indexAction()
     {
         return Admin::select(
@@ -44,24 +39,22 @@ class AdminController extends Controller
         return Admin::kvalues('admin_name');
     }
 
-    public function lockAction()
+    public function lockAction(int $admin_id)
     {
         if ($this->identity->getId() == input('admin_id')) {
             return '不能锁定自己';
         }
 
-        return Admin::rUpdate(['status' => Admin::STATUS_LOCKED]);
+        return Admin::get($admin_id)->save(['status' => Admin::STATUS_LOCKED]);
     }
 
-    public function activeAction()
+    public function activeAction(int $admin_id)
     {
-        return Admin::rUpdate(['status' => Admin::STATUS_ACTIVE]);
+        return Admin::get($admin_id)->save(['status' => Admin::STATUS_ACTIVE]);
     }
 
-    public function createAction($role_id)
+    public function createAction(Admin $admin, $role_id)
     {
-        $admin = Admin::rCreate();
-
         if ($role_id) {
             $role = Role::get($role_id);
 
@@ -77,10 +70,8 @@ class AdminController extends Controller
         return $admin;
     }
 
-    public function editAction($role_ids = [])
+    public function editAction(Admin $admin, $role_ids = [])
     {
-        $admin = Admin::rGet();
-
         $admin->load(['email', 'white_ip']);
         if ($password = input('password', '')) {
             $admin->password = $password;
@@ -107,6 +98,7 @@ class AdminController extends Controller
         return $admin;
     }
 
+    #[AcceptVerbs(['GET'])]
     public function rolesAction()
     {
         return Role::lists(['display_name', 'role_name'], ['role_name!=' => ['guest', 'user']]);

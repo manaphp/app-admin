@@ -1,11 +1,14 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Rbac\Controllers;
 
 use App\Areas\Rbac\Models\AdminRole;
 use App\Areas\Rbac\Models\Role;
 use App\Controllers\Controller;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
+#[Authorize('@index')]
 class RoleController extends Controller
 {
     public function indexAction()
@@ -30,27 +33,26 @@ class RoleController extends Controller
             $permissions = '';
         }
 
-        return Role::rCreate(['role_name', 'display_name', 'enabled', 'permissions' => $permissions]);
+        return (new Role)->save(['role_name', 'display_name', 'enabled', 'permissions' => $permissions]);
     }
 
-    public function editAction()
+    public function editAction(Role $role)
     {
-        return Role::rUpdate();
+        return $role->update();
     }
 
-    public function disableAction()
+    public function disableAction(int $role_id)
     {
-        return Role::rUpdate(['enabled' => 0]);
+        return Role::get($role_id)->save(['enabled' => 0]);
     }
 
-    public function enableAction()
+    public function enableAction(int $role_id)
     {
-        return Role::rUpdate(['enabled' => 1]);
+        return Role::get($role_id)->save(['enabled' => 1]);
     }
 
-    public function deleteAction()
+    public function deleteAction(Role $role)
     {
-        $role = Role::rGet();
         if (AdminRole::exists(['role_id' => $role->role_id])) {
             return '删除失败: 有用户绑定到此角色';
         }

@@ -1,6 +1,3 @@
-/vendor
-/data
-/tmp
+/runtime
 /config/.env
 /.idea
-/docker/*.bak

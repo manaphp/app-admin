@@ -1,9 +1,12 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Menu\Models;
 
 use App\Models\Model;
+use ManaPHP\Data\Model\Attribute\Table;
 
+#[Table('menu_item')]
 class Item extends Model
 {
     public $item_id;
@@ -17,12 +20,7 @@ class Item extends Model
     public $created_time;
     public $updated_time;
 
-    public function table()
-    {
-        return 'menu_item';
-    }
-
-    public function rules()
+    public function rules(): array
     {
         return [
             'item_name'     => ['length' => '2-32', 'unique' => 'group_id'],

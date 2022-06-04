@@ -1,16 +1,14 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Admin\Controllers;
 
 use App\Controllers\Controller;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
+#[Authorize('admin')]
 class MailController extends Controller
 {
-    public function getAcl()
-    {
-        return ['*' => 'admin'];
-    }
-
     public function resetPasswordAction()
     {
         $this->view->setVars(

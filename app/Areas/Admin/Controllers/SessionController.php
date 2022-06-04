@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Areas\Admin\Controllers;
 
@@ -9,18 +10,15 @@ use App\Models\Admin;
 use App\Models\AdminLoginLog;
 use ManaPHP\Helper\Ip;
 use ManaPHP\Helper\Str;
+use ManaPHP\Http\Controller\Attribute\Authorize;
 
 /**
- * @property-read \ManaPHP\Configuration\Configure $configure
- * @property-read \ManaPHP\Http\CaptchaInterface   $captcha
+ * @property-read \ManaPHP\ConfigInterface       $config
+ * @property-read \ManaPHP\Http\CaptchaInterface $captcha
  */
+#[Authorize('*')]
 class SessionController extends Controller
 {
-    public function getAcl()
-    {
-        return ['*' => '*'];
-    }
-
     public function captchaAction()
     {
         return $this->captcha->generate();
@@ -39,7 +37,7 @@ class SessionController extends Controller
             $this->cookies->set('CLIENT_UDID', Str::random(16), strtotime('10 year'), '/');
         }
 
-        if ($this->configure->env === 'prod') {
+        if ($this->config->get('env') === 'prod') {
             $this->captcha->verify();
         } else {
             $this->session->remove('captcha');
@@ -94,6 +92,7 @@ class SessionController extends Controller
         $adminLoginLog->create();
     }
 
+    #[Authorize('user')]
     public function logoutAction()
     {
         $this->session->destroy();
