@@ -40,8 +40,7 @@
     ]
   },
   "require": {
-    "php": ">=8.0.2",
-    "ext-json": "*",
-    "manaphp/framework": "dev-master"
+    "php": ">=8.1",
+    "manaphp/framework": "3.1.*"
   }
 }

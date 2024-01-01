@@ -11,18 +11,18 @@ use ManaPHP\Http\Controller\Attribute\Authorize;
 class ActionLogController extends Controller
 {
     #[Authorize]
-    public function indexAction()
+    public function indexAction(int $page = 1, int $size = 10)
     {
         return AdminActionLog::select()
-            ->search(['admin_name', 'path', 'client_ip', 'created_time@=', 'tag'])
+            ->whereCriteria($this->request->all(), ['admin_name', 'handler', 'client_ip', 'created_time@=', 'tag'])
             ->orderBy(['id' => SORT_DESC])
-            ->paginate();
+            ->paginate($page, $size);
     }
 
     #[Authorize('user')]
     public function detailAction(AdminActionLog $adminActionLog)
     {
-        if ($adminActionLog->admin_id == $this->identity->getId() || $this->authorization->isAllowed('detail')) {
+        if ($adminActionLog->admin_id === $this->identity->getId() || $this->authorization->isAllowed('detail')) {
             return $adminActionLog;
         } else {
             return '没有权限';
@@ -31,12 +31,12 @@ class ActionLogController extends Controller
 
     #[AcceptVerbs(['GET'])]
     #[Authorize('user')]
-    public function latestAction()
+    public function latestAction(int $page = 1, int $size = 10)
     {
         return AdminActionLog::select()
             ->where(['admin_id' => $this->identity->getId()])
-            ->search(['path', 'client_ip', 'created_time@=', 'tag'])
+            ->whereCriteria($this->request->all(), ['handler', 'client_ip', 'created_time@=', 'tag'])
             ->orderBy(['id' => SORT_DESC])
-            ->paginate();
+            ->paginate($page, $size);
     }
 }

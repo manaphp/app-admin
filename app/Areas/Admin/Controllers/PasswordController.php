@@ -5,16 +5,23 @@ namespace App\Areas\Admin\Controllers;
 
 use App\Controllers\Controller;
 use App\Models\Admin;
+use Exception;
+use ManaPHP\Di\Attribute\Autowired;
+use ManaPHP\Di\Attribute\Config;
+use ManaPHP\Http\CaptchaInterface;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Mailing\MailerInterface;
+use ManaPHP\Mvc\ViewInterface;
 
-/**
- * @property-read \ManaPHP\ConfigInterface         $config
- * @property-read \ManaPHP\Http\CaptchaInterface   $captcha
- * @property-read \ManaPHP\Mailing\MailerInterface $mailer
- */
 #[Authorize('*')]
 class PasswordController extends Controller
 {
+    #[Autowired] protected ViewInterface $view;
+    #[Autowired] protected CaptchaInterface $captcha;
+    #[Autowired] protected MailerInterface $mailer;
+
+    #[Config] protected string $app_name;
+
     public function captchaAction()
     {
         return $this->captcha->generate();
@@ -22,16 +29,13 @@ class PasswordController extends Controller
 
     public function forgetView()
     {
-        $this->view->setVar('redirect', input('redirect', $this->router->createUrl('/')));
+        $this->view->setVar('redirect', $this->request->input('redirect', $this->router->createUrl('/')));
 
         return $this->view->setVar('admin_name', $this->cookies->get('admin_name'));
     }
 
-    public function forgetAction()
+    public function forgetAction(string $admin_name, string $email)
     {
-        $admin_name = input('admin_name');
-        $email = input('email');
-
         $admin = Admin::first(['admin_name' => $admin_name]);
         if (!$admin || $admin->email !== $email) {
             return '账号不存在或账号与邮箱不匹配';
@@ -40,23 +44,21 @@ class PasswordController extends Controller
         $token = jwt_encode(['admin_name' => $admin_name], 600, 'admin.password.forget');
 
         $this->mailer->compose()
-            ->setSubject($this->config->get('name') . '-重置密码邮件')
+            ->setSubject($this->app_name . '-重置密码邮件')
             ->setTo($email)
             ->setHtmlBody(
                 ['@app/Areas/Admin/Views/Mail/ResetPassword', 'email' => $email, 'admin_name' => $admin_name,
                  'token'                                              => $token]
             )
             ->send();
-        return $this->response->setJsonOk('重置密码连接已经发送到您的邮箱');
+        return $this->response->json(['code' => 0, 'msg' => '重置密码连接已经发送到您的邮箱']);
     }
 
-    public function resetView()
+    public function resetView(string $token)
     {
-        $token = input('token');
-
         try {
             $claims = jwt_decode($token, 'admin.password.forget');
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             return $this->view->setVars(['expired' => true, 'token' => $token]);
         }
 
@@ -69,33 +71,33 @@ class PasswordController extends Controller
         );
     }
 
-    public function resetAction()
+    public function resetAction(string $token, string $password)
     {
         try {
-            $claims = jwt_decode(input('token'), 'admin.password.forget');
-        } catch (\Exception $exception) {
+            $claims = jwt_decode($token, 'admin.password.forget');
+        } catch (Exception $exception) {
             return '重置失败：Token已过期';
         }
 
         $admin_name = $claims['admin_name'];
 
         $admin = Admin::firstOrFail(['admin_name' => $admin_name]);
-        $admin->password = input('password');
+        $admin->password = $password;
         $admin->update();
 
-        return $this->response->setJsonOk('重置密码成功');
+        return $this->response->json(['code' => 0, 'msg' => '重置密码成功']);
     }
 
     #[Authorize('user')]
-    public function changeAction()
+    public function changeAction(string $old_password, string $new_password, string $new_password_confirm)
     {
         $admin = Admin::get($this->identity->getId());
-        if (!$admin->verifyPassword(input('old_password'))) {
+        if (!$admin->verifyPassword($old_password)) {
             return '旧密码不正确';
         }
 
-        $admin->password = input('new_password');
-        if (input('new_password_confirm') !== $admin->password) {
+        $admin->password = $new_password;
+        if ($new_password_confirm !== $admin->password) {
             return '两次输入的密码不一致';
         }
 

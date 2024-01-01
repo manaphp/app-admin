@@ -7,56 +7,52 @@ use App\Areas\Rbac\Models\Permission;
 use App\Areas\Rbac\Models\Role;
 use App\Areas\Rbac\Models\RolePermission;
 use App\Controllers\Controller;
+use ManaPHP\Di\Attribute\Autowired;
+use ManaPHP\Http\AuthorizationInterface;
 use ManaPHP\Http\Controller\Attribute\Authorize;
 
-/**
- * Class RolePermission
- *
- * @package App\Areas\Rbac\Models
- *
- * @property-read \ManaPHP\Http\AuthorizationInterface $authorization
- */
 #[Authorize('@index')]
 class RolePermissionController extends Controller
 {
+    #[Autowired] protected AuthorizationInterface $authorization;
+
     public function indexAction()
     {
         return RolePermission::select(['id', 'permission_id', 'creator_name', 'created_time'])
-            ->with(['permission' => 'permission_id, display_name, path', 'roles' => 'role_id, role_name, display_name'])
-            ->search(['role_id'])
+            ->with(
+                ['permission' => 'permission_id, display_name, handler', 'roles' => 'role_id, role_name, display_name']
+            )
+            ->whereCriteria($this->request->all(), ['role_id'])
             ->all();
     }
 
-    public function saveAction()
+    public function saveAction(int $role_id, array $permission_ids = [])
     {
-        $role_id = input('role_id');
-        $permission_ids = input('permission_ids', []);
-
-        $old_permissions = RolePermission::values('permission_id', ['role_id' => $role_id]);
+        $role = Role::get($role_id);
+        $old_permissions = RolePermission::values('permission_id', ['role_id' => $role->role_id]);
 
         RolePermission::deleteAll(
-            ['role_id' => $role_id, 'permission_id' => array_values(array_diff($old_permissions, $permission_ids))]
+            ['role_id'       => $role->role_id,
+             'permission_id' => array_values(array_diff($old_permissions, $permission_ids))]
         );
 
         foreach (array_diff($permission_ids, $old_permissions) as $permission_id) {
             $rolePermission = new RolePermission();
-            $rolePermission->role_id = $role_id;
+            $rolePermission->role_id = $role->role_id;
             $rolePermission->permission_id = $permission_id;
             $rolePermission->create();
         }
 
-        $role = Role::get($role_id);
+        $explicit_permissions = Permission::values('handler', ['permission_id' => $permission_ids]);
+        $handlers = $this->authorization->buildAllowed($role->role_name, $explicit_permissions);
+        sort($handlers);
 
-        $explicit_permissions = Permission::values('path', ['permission_id' => $permission_ids]);
-        $paths = $this->authorization->buildAllowed($role->role_name, $explicit_permissions);
-        sort($paths);
-
-        $role->permissions = ',' . implode(',', $paths) . ',';
+        $role->permissions = ',' . implode(',', $handlers) . ',';
         $role->update();
     }
 
-    public function editAction()
+    public function editAction(int $role_id, array $permission_ids)
     {
-        $this->saveAction();
+        $this->saveAction($role_id, $permission_ids);
     }
 }

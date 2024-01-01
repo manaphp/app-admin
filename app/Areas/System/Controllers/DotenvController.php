@@ -5,20 +5,19 @@ namespace App\Areas\System\Controllers;
 
 use App\Areas\System\Models\DotenvLog;
 use App\Controllers\Controller;
+use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Redis\RedisDbInterface;
 
-/**
- * @property-read \ManaPHP\Data\RedisDbInterface $redisDb
- */
 #[Authorize('@index')]
 class DotenvController extends Controller
 {
-    const REDIS_KEY = '.env';
+    #[Autowired] protected RedisDbInterface $redisDb;
 
-    public function indexAction()
+    public const REDIS_KEY = '.env';
+
+    public function indexAction(string $app_id = '')
     {
-        $app_id = input('app_id', '');
-
         if ($app_id === '') {
             return [];
         } else {
@@ -37,13 +36,10 @@ class DotenvController extends Controller
         return $apps;
     }
 
-    public function createAction()
+    public function createAction(string $app_id, string $env)
     {
-        $app_id = input('app_id');
-        $env = input('env');
-
         if ($this->redisDb->hExists(self::REDIS_KEY, $app_id)) {
-            return "${app_id}已存在";
+            return "{$app_id}已存在";
         }
 
         $dotenvLog = new DotenvLog();
@@ -56,13 +52,10 @@ class DotenvController extends Controller
         $this->redisDb->hSet(self::REDIS_KEY, $app_id, $env);
     }
 
-    public function editAction()
+    public function editAction(string $app_id, string $env)
     {
-        $app_id = input('app_id');
-        $env = input('env');
-
         if (!$this->redisDb->hExists(self::REDIS_KEY, $app_id)) {
-            return "${app_id}不存在";
+            return "{$app_id}不存在";
         }
 
         if ($this->redisDb->hGet(self::REDIS_KEY, $app_id) === $env) {
@@ -79,8 +72,8 @@ class DotenvController extends Controller
         $this->redisDb->hSet(self::REDIS_KEY, $app_id, $env);
     }
 
-    public function deleteAction()
+    public function deleteAction(string $app_id)
     {
-        $this->redisDb->hDel(self::REDIS_KEY, input('app_id'));
+        $this->redisDb->hDel(self::REDIS_KEY, $app_id);
     }
 }

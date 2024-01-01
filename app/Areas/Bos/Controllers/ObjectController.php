@@ -4,28 +4,30 @@ declare(strict_types=1);
 namespace App\Areas\Bos\Controllers;
 
 use App\Controllers\Controller;
+use ManaPHP\Bos\ClientInterface;
+use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\Controller\Attribute\Authorize;
 use Throwable;
 
-/**
- * @property-read \ManaPHP\Bos\ClientInterface $bosClient
- */
 #[Authorize('@index')]
 class ObjectController extends Controller
 {
+    #[Autowired] protected ClientInterface $bosClient;
+
     public function bucketsAction()
     {
         return $this->bosClient->listBuckets();
     }
 
-    public function indexAction($bucket_name = '')
-    {
+    public function indexAction($bucket_name = '', string $prefix = '', string $extension = '', int $page = 1,
+        int $size = 10
+    ) {
         $filters = [];
 
-        $filters['prefix'] = input('prefix', '');
-        $filters['extension'] = input('extension', '');
-        $filters['page'] = input('page', 1);
-        $filters['size'] = input('size', 10);
+        $filters['prefix'] = $prefix;
+        $filters['extension'] = $extension;
+        $filters['page'] = $page;
+        $filters['size'] = $size;
 
         try {
             return $this->bosClient->listObjects($bucket_name, $filters);
@@ -41,6 +43,6 @@ class ObjectController extends Controller
         }
 
         $url = $this->bosClient->getPutObjectUrl($bucket_name, $key, ['insert_only' => $insert_only !== 'false']);
-        return $this->response->setJsonData($url);
+        return $this->response->json(['code' => 0, 'msg' => '', 'data' => $url]);
     }
 }

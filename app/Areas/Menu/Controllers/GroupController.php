@@ -12,7 +12,8 @@ class GroupController extends Controller
 {
     public function indexAction()
     {
-        return Group::search(['group_id'])
+        return Group::select()
+            ->whereCriteria($this->request->all(), ['group_id'])
             ->orderBy(['display_order' => SORT_DESC, 'group_id' => SORT_ASC])
             ->all();
     }
@@ -22,14 +23,14 @@ class GroupController extends Controller
         return Group::all([], ['group_id', 'group_name']);
     }
 
-    public function createAction(Group $group)
+    public function createAction()
     {
-        return $group->create();
+        return Group::fillCreate($this->request->all());
     }
 
     public function editAction(Group $group)
     {
-        return $group->update();
+        return $group->fillUpdate($this->request->all());
     }
 
     public function deleteAction(Group $group)

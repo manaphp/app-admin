@@ -7,14 +7,15 @@ use App\Areas\Rbac\Models\AdminRole;
 use App\Areas\Rbac\Models\Role;
 use App\Controllers\Controller;
 use App\Models\Admin;
-use ManaPHP\Data\QueryInterface;
 use ManaPHP\Http\Controller\Attribute\AcceptVerbs;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\InputInterface;
+use ManaPHP\Query\QueryInterface;
 
 #[Authorize('@index')]
 class AdminController extends Controller
 {
-    public function indexAction()
+    public function indexAction(string $keyword = '', int $page = 1, int $size = 10)
     {
         return Admin::select(
             ['admin_id', 'admin_name', 'status', 'white_ip', 'login_ip', 'login_time', 'email', 'updator_name',
@@ -22,16 +23,15 @@ class AdminController extends Controller
         )
             ->orderBy(['admin_id' => SORT_DESC])
             ->with(['roles' => 'role_id, display_name'])
-            ->when(
-                static function (QueryInterface $query) {
-                    $keyword = input('keyword', '');
+            ->callable(
+                static function (QueryInterface $query) use ($keyword) {
                     if (str_contains($keyword, '@')) {
                         $query->whereContains('email', $keyword);
                     } else {
                         $query->whereContains(['admin_name', 'email'], $keyword);
                     }
                 }
-            )->paginate();
+            )->paginate($page, $size);
     }
 
     public function listAction()
@@ -41,20 +41,30 @@ class AdminController extends Controller
 
     public function lockAction(int $admin_id)
     {
-        if ($this->identity->getId() == input('admin_id')) {
+        $admin = Admin::get($admin_id);
+
+        if ($this->identity->getId() === $admin->admin_id) {
             return '不能锁定自己';
         }
 
-        return Admin::get($admin_id)->save(['status' => Admin::STATUS_LOCKED]);
+        $admin->status = Admin::STATUS_LOCKED;
+
+        return $admin->update();
     }
 
     public function activeAction(int $admin_id)
     {
-        return Admin::get($admin_id)->save(['status' => Admin::STATUS_ACTIVE]);
+        $admin = Admin::get($admin_id);
+
+        $admin->status = Admin::STATUS_ACTIVE;
+
+        return $admin->update();
     }
 
-    public function createAction(Admin $admin, $role_id)
+    public function createAction(InputInterface $input, ?int $role_id)
     {
+        $admin = Admin::fillCreate($input->all());
+
         if ($role_id) {
             $role = Role::get($role_id);
 
@@ -70,12 +80,16 @@ class AdminController extends Controller
         return $admin;
     }
 
-    public function editAction(Admin $admin, $role_ids = [])
+    public function editAction(int $admin_id, array $role_ids = [], string $password = '')
     {
-        $admin->load(['email', 'white_ip']);
-        if ($password = input('password', '')) {
+        $admin = Admin::get($admin_id);
+
+        $admin->assign($this->request->all(), ['email', 'white_ip']);
+
+        if ($password !== '') {
             $admin->password = $password;
         }
+
         $admin->update();
 
         $old_role_ids = AdminRole::values('role_id', ['admin_id' => $admin->admin_id]);

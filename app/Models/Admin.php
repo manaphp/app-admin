@@ -5,39 +5,53 @@ namespace App\Models;
 
 use App\Areas\Rbac\Models\AdminRole;
 use App\Areas\Rbac\Models\Role;
-use ManaPHP\Data\Model\Relation\HasManyToMany;
+use ManaPHP\Identifying\IdentityInterface;
+use ManaPHP\Invoking\ArgumentResolvable;
+use ManaPHP\Model\Event\ModelCreating;
+use ManaPHP\Model\Event\ModelUpdating;
+use ManaPHP\Model\Relation\HasManyToMany;
+use ManaPHP\Validating\Constraint\Attribute\Account;
+use ManaPHP\Validating\Constraint\Attribute\Constant;
+use ManaPHP\Validating\Constraint\Attribute\Defaults;
+use ManaPHP\Validating\Constraint\Attribute\Email;
+use ManaPHP\Validating\Constraint\Attribute\Immutable;
+use ManaPHP\Validating\Constraint\Attribute\Length;
+use ManaPHP\Validating\Constraint\Attribute\MaxLength;
+use ManaPHP\Validating\Constraint\Attribute\Unique;
+use Psr\Container\ContainerInterface;
 
-class Admin extends Model
+class Admin extends Model implements ArgumentResolvable
 {
-    const STATUS_INIT = 0;
-    const STATUS_ACTIVE = 1;
-    const STATUS_LOCKED = 2;
+    public const STATUS_INIT = 0;
+    public const STATUS_ACTIVE = 1;
+    public const STATUS_LOCKED = 2;
 
-    const PASSWORD_LENGTH = '1-30';
+    public int $admin_id;
+    #[Length(4, 16), Account, Immutable, Unique]
+    public string $admin_name;
+    #[Constant]
+    public int $status;
+    public int $type;
+    public int $tag;
+    #[Email, Unique]
+    public string $email;
+    public string $salt;
+    #[Length(6, 16)]
+    public string $password;
+    #[Defaults(''), MaxLength(64)]
+    public string $white_ip;
+    public string $login_ip;
+    public int $login_time;
+    public string $session_id;
+    public string $creator_name;
+    public string $updator_name;
+    public int $created_time;
+    public int $updated_time;
 
-    public $admin_id;
-    public $admin_name;
-    public $email;
-    public $status;
-    public $salt;
-    public $password;
-    public $white_ip;
-    public $login_ip;
-    public $login_time;
-    public $session_id;
-    public $creator_name;
-    public $updator_name;
-    public $created_time;
-    public $updated_time;
-
-    public function rules(): array
+    public static function argumentResolve(ContainerInterface $container): mixed
     {
-        return [
-            'admin_name' => ['length' => '4-16', 'account', 'readonly'],
-            'email'      => ['lower', 'email', 'unique'],
-            'status'     => 'const',
-            'white_ip'   => ['default' => '', 'maxLength' => 64]
-        ];
+        $identity = $container->get(IdentityInterface::class);
+        return static::get($identity->getId());
     }
 
     public function relations(): array
@@ -55,22 +69,13 @@ class Admin extends Model
         return $this->hashPassword($password) === $this->password;
     }
 
-    public function create(): static
+    public function fireEvent(object $event): void
     {
-        $this->salt = bin2hex(random_bytes(8));
+        parent::fireEvent($event);
 
-        $this->password = $this->hashPassword(input('password', ['string', self::PASSWORD_LENGTH]));
-
-        return parent::create();
-    }
-
-    public function update(): static
-    {
-        if ($this->hasChanged(['password'])) {
+        if ($event instanceof ModelCreating || ($event instanceof ModelUpdating && $this->hasChanged(['password']))) {
             $this->salt = bin2hex(random_bytes(8));
             $this->password = $this->hashPassword($this->password);
         }
-
-        return parent::update();
     }
 }

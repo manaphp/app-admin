@@ -11,13 +11,13 @@ use ManaPHP\Http\Controller\Attribute\Authorize;
 #[Authorize('@index')]
 class RoleController extends Controller
 {
-    public function indexAction()
+    public function indexAction(string $keyword = '', int $page = 1, int $size = 10)
     {
         return Role::select()
-            ->whereContains('role_name', input('keyword', ''))
+            ->whereContains(['role_name', 'display_name'], $keyword)
             ->whereNotIn('role_name', ['guest', 'user', 'admin'])
             ->orderBy(['role_id' => SORT_DESC])
-            ->paginate();
+            ->paginate($page, $size);
     }
 
     public function listAction()
@@ -25,30 +25,30 @@ class RoleController extends Controller
         return Role::lists(['display_name', 'role_name']);
     }
 
-    public function createAction()
+    public function createAction(string $role_name)
     {
-        if ($role_name = input('role_name', '')) {
-            $permissions = ',' . implode(',', $this->authorization->buildAllowed($role_name)) . ',';
-        } else {
-            $permissions = '';
-        }
+        $permissions = ',' . implode(',', $this->authorization->buildAllowed($role_name)) . ',';
 
-        return (new Role)->save(['role_name', 'display_name', 'enabled', 'permissions' => $permissions]);
+        return Role::fillCreate($this->request->all(), ['permissions' => $permissions]);
     }
 
     public function editAction(Role $role)
     {
+        return $role->fillUpdate($this->request->all());
+    }
+
+    public function disableAction(Role $role)
+    {
+        $role->enabled = 0;
+
         return $role->update();
     }
 
-    public function disableAction(int $role_id)
+    public function enableAction(Role $role)
     {
-        return Role::get($role_id)->save(['enabled' => 0]);
-    }
+        $role->enabled = 1;
 
-    public function enableAction(int $role_id)
-    {
-        return Role::get($role_id)->save(['enabled' => 1]);
+        return $role->update();
     }
 
     public function deleteAction(Role $role)

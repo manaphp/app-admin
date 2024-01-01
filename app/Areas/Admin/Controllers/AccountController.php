@@ -5,25 +5,28 @@ namespace App\Areas\Admin\Controllers;
 
 use App\Controllers\Controller;
 use App\Models\Admin;
+use ManaPHP\Di\Attribute\Autowired;
+use ManaPHP\Http\CaptchaInterface;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\ResponseInterface;
 
-/**
- * @property-read \ManaPHP\Http\CaptchaInterface $captcha
- */
 #[Authorize('admin')]
 class AccountController extends Controller
 {
-    public function captchaAction()
+    #[Autowired] protected CaptchaInterface $captcha;
+
+    public function captchaAction(): ResponseInterface
     {
         return $this->captcha->generate();
     }
 
-    public function registerAction()
+    public function registerAction(string $code, string $password)
     {
-        $this->captcha->verify();
+        $this->captcha->verify($code);
 
-        return (new Admin)->save(
-            ['admin_name', 'email', 'password', 'white_ip' => '*', 'status' => Admin::STATUS_INIT]
+        return Admin::fillCreate(
+            $this->request->all(),
+            ['white_ip' => '*', 'status' => Admin::STATUS_INIT, 'password' => $password]
         );
     }
 }

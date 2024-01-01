@@ -1,15 +1,14 @@
 <?php
+declare(strict_types=1);
 
-return [
-    'id'            => 'admin',
-    'name'          => 'ManaPHP管理系统',
-    'env'           => env('APP_ENV', 'prod'),
-    'debug'         => env('APP_DEBUG', false),
-    'aliases'       => [
-        '@web' => ''
+return ['ManaPHP\Di\ConfigInterface' => [
+    'config' => [
+        'app_id'    => 'admin',
+        'app_name'  => 'ManaPHP管理系统',
+        'app_env'   => env('APP_ENV', 'prod'),
+        'app_debug' => env('APP_DEBUG', false),
+        'timezone'      => 'Asia/Shanghai',
+        'aliases'   => [
+        ],
     ],
-    'factories'     => require __DIR__ . '/factories.php',
-    'dependencies'  => require __DIR__ . '/dependencies.php',
-    'bootstrappers' => require __DIR__ . '/bootstrappers.php',
-    'filters'       => require __DIR__ . '/filters.php',
-];
+]];

@@ -12,19 +12,20 @@ class ItemController extends Controller
 {
     public function indexAction()
     {
-        return Item::search(['group_id'])
+        return Item::select()
+            ->whereCriteria($this->request->all(), ['group_id'])
             ->orderBy(['group_id' => SORT_ASC, 'display_order' => SORT_DESC, 'item_id' => SORT_ASC])
             ->all();
     }
 
-    public function createAction(Item $item)
+    public function createAction()
     {
-        return $item->create();
+        return Item::fillCreate($this->request->all());
     }
 
     public function editAction(Item $item)
     {
-        return $item->update();
+        return $item->fillUpdate($this->request->all());
     }
 
     public function deleteAction(Item $item)

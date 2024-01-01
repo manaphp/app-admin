@@ -4,28 +4,32 @@ declare(strict_types=1);
 namespace App\Listeners;
 
 use App\Models\AdminActionLog;
-use ManaPHP\Event\Listener;
+use ManaPHP\Context\ContextTrait;
+use ManaPHP\Db\Event\DbExecuting;
+use ManaPHP\Di\Attribute\Autowired;
+use ManaPHP\Eventing\Attribute\Event;
 use ManaPHP\Helper\Arr;
+use ManaPHP\Http\CookiesInterface;
+use ManaPHP\Http\DispatcherInterface;
+use ManaPHP\Http\RequestInterface;
+use ManaPHP\Identifying\IdentityInterface;
 
-/**
- * @property-read \ManaPHP\Identifying\IdentityInterface       $identity
- * @property-read \ManaPHP\Http\RequestInterface               $request
- * @property-read \ManaPHP\Http\CookiesInterface               $cookies
- * @property-read \ManaPHP\Http\DispatcherInterface            $dispatcher
- * @property-read \App\Listeners\AdminActionLogListenerContext $context
- */
-class AdminActionLogListener extends Listener
+class AdminActionLogListener
 {
-    public function listen(): void
-    {
-        $this->attachEvent('app:logAction', [$this, 'onAppLogAction']);
-        $this->attachEvent('db:executing', [$this, 'onDbExecuting']);
-    }
+    use ContextTrait;
 
-    public function onDbExecuting(): void
+    #[Autowired] protected IdentityInterface $identity;
+    #[Autowired] protected RequestInterface $request;
+    #[Autowired] protected CookiesInterface $cookies;
+    #[Autowired] protected DispatcherInterface $dispatcher;
+
+    public function onDbExecuting(#[Event] DbExecuting $event): void
     {
-        if (!$this->context->logged && $this->dispatcher->isInvoking()) {
-            $this->onAppLogAction();
+        /** @var AdminActionLogListenerContext $context */
+        $context = $this->getContext();
+
+        if (!$context->logged && $this->dispatcher->isInvoking()) {
+            $this->onAppLogAction(new AdminActionLog());
         }
     }
 
@@ -44,12 +48,20 @@ class AdminActionLogListener extends Listener
         return 0;
     }
 
-    public function onAppLogAction(): void
+    public function onAppLogAction(#[Event] DbExecuting|AdminActionLog $event): void
     {
-        $context = $this->context;
+        /** @var AdminActionLogListenerContext $context */
+        $context = $this->getContext();
         if ($context->logged) {
             return;
         }
+
+        if ($event instanceof DbExecuting) {
+            if (!$this->dispatcher->isInvoking()) {
+                return;
+            }
+        }
+
         $context->logged = true;
 
         $data = Arr::except($this->request->all(), ['_url']);
@@ -59,14 +71,14 @@ class AdminActionLogListener extends Listener
         unset($data['ajax']);
 
         $adminActionLog = new AdminActionLog();
-        $adminActionLog->admin_id = $this->identity->getId(0);
-        $adminActionLog->admin_name = $this->identity->getName('');
-        $adminActionLog->client_ip = $this->request->getClientIp();
-        $adminActionLog->method = $this->request->getMethod();
-        $adminActionLog->url = parse_url($this->request->getUri(), PHP_URL_PATH);
+        $adminActionLog->admin_id = $this->identity->isGuest() ? 0 : $this->identity->getId();
+        $adminActionLog->admin_name = $this->identity->isGuest() ? '' : $this->identity->getName();
+        $adminActionLog->client_ip = $this->request->ip();
+        $adminActionLog->method = $this->request->method();
+        $adminActionLog->url = $this->request->path();
         $adminActionLog->tag = ((int)$this->getTag()) & 0xFFFFFFFF;
-        $adminActionLog->data = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $adminActionLog->path = $this->dispatcher->getPath();
+        $adminActionLog->data = json_stringify($data);
+        $adminActionLog->handler = $this->dispatcher->getHandler();
         $adminActionLog->client_udid = $this->cookies->get('CLIENT_UDID');
         $adminActionLog->create();
     }

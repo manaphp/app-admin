@@ -4,27 +4,26 @@ declare(strict_types=1);
 namespace App\Areas\Rbac\Models;
 
 use App\Models\Model;
-use ManaPHP\Data\Model\Attribute\Table;
+use ManaPHP\Model\Attribute\Table;
+use ManaPHP\Validating\Constraint\Attribute\Length;
+use ManaPHP\Validating\Constraint\Attribute\Lowercase;
+use ManaPHP\Validating\Constraint\Attribute\Trim;
+use ManaPHP\Validating\Constraint\Attribute\Type;
+use ManaPHP\Validating\Constraint\Attribute\Unique;
 
 #[Table('rbac_role')]
 class Role extends Model
 {
-    public $role_id;
-    public $role_name;
-    public $display_name;
-    public $enabled;
-    public $permissions;
-    public $creator_name;
-    public $updator_name;
-    public $created_time;
-    public $updated_time;
-
-    public function rules(): array
-    {
-        return [
-            'role_name'    => ['lower', 'length' => '3-15', 'unique'],
-            'display_name' => ['trim', 'lower', 'length' => '3-15', 'unique'],
-            'enabled'      => 'bool',
-        ];
-    }
+    public int $role_id;
+    #[Lowercase, Length(3, 15), Unique]
+    public string $role_name;
+    #[Trim, Lowercase, Length(3, 15), Unique]
+    public string $display_name;
+    #[Type('bit')]
+    public int $enabled;
+    public string $permissions;
+    public string $creator_name;
+    public string $updator_name;
+    public int $created_time;
+    public int $updated_time;
 }

@@ -8,17 +8,20 @@ use App\Areas\Rbac\Models\Role;
 use App\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\AdminLoginLog;
+use ManaPHP\Di\Attribute\Autowired;
+use ManaPHP\Di\Attribute\Config;
 use ManaPHP\Helper\Ip;
 use ManaPHP\Helper\Str;
+use ManaPHP\Http\CaptchaInterface;
 use ManaPHP\Http\Controller\Attribute\Authorize;
 
-/**
- * @property-read \ManaPHP\ConfigInterface       $config
- * @property-read \ManaPHP\Http\CaptchaInterface $captcha
- */
 #[Authorize('*')]
 class SessionController extends Controller
 {
+    #[Autowired] protected CaptchaInterface $captcha;
+
+    #[Config] protected string $app_env;
+
     public function captchaAction()
     {
         return $this->captcha->generate();
@@ -26,25 +29,25 @@ class SessionController extends Controller
 
     public function loginView()
     {
-        $this->view->setVar('redirect', input('redirect', $this->router->createUrl('/')));
+        $this->view->setVar('redirect', $this->request->input('redirect', $this->router->createUrl('/')));
 
         return $this->view->setVar('admin_name', $this->cookies->get('admin_name'));
     }
 
-    public function loginAction()
+    public function loginAction(string $code, string $admin_name, string $password)
     {
         if (!$udid = $this->cookies->get('CLIENT_UDID')) {
             $this->cookies->set('CLIENT_UDID', Str::random(16), strtotime('10 year'), '/');
         }
 
-        if ($this->config->get('env') === 'prod') {
-            $this->captcha->verify();
+        if ($this->app_env === 'prod') {
+            $this->captcha->verify($code);
         } else {
             $this->session->remove('captcha');
         }
 
-        $admin = Admin::first(['admin_name' => input('admin_name')]);
-        if (!$admin || !$admin->verifyPassword(input('password'))) {
+        $admin = Admin::first(['admin_name' => $admin_name]);
+        if (!$admin || !$admin->verifyPassword($password)) {
             return '账号或密码不正确';
         }
 
@@ -54,7 +57,7 @@ class SessionController extends Controller
             return '账号已锁定';
         }
 
-        $client_ip = $this->request->getClientIp();
+        $client_ip = $this->request->ip();
 
         if (!Ip::contains($admin->white_ip, $client_ip)) {
             return "$client_ip 地址未在白名单";
@@ -68,7 +71,7 @@ class SessionController extends Controller
         }
 
         $claims = ['admin_id' => $admin->admin_id, 'admin_name' => $admin->admin_name, 'role' => implode(',', $roles)];
-        $this->identity->setClaims($claims);
+        $this->identity->set($claims);
 
         $session_id = $this->session->getId();
         if ($admin->session_id && $session_id !== $admin->session_id) {
@@ -87,7 +90,7 @@ class SessionController extends Controller
         $adminLoginLog->admin_name = $admin->admin_name;
         $adminLoginLog->client_ip = $client_ip;
         $adminLoginLog->client_udid = $udid;
-        $adminLoginLog->user_agent = $this->request->getUserAgent(255);
+        $adminLoginLog->user_agent = \substr($this->request->header('user-agent'), 0, 255);
 
         $adminLoginLog->create();
     }
