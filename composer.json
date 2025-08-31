@@ -41,6 +41,6 @@
   },
   "require": {
     "php": ">=8.1",
-    "manaphp/framework": "3.1.*"
+    "manaphp/framework": "3.4.*"
   }
 }
