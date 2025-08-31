@@ -1,15 +1,24 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Admin\Controllers;
 
 use App\Controllers\Controller;
+use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
+use ManaPHP\Viewing\View\Attribute\ViewPostMapping;
+use ManaPHP\Viewing\ViewInterface;
 
-#[Authorize('admin')]
+#[Authorize]
+#[RequestMapping('/admin/mail')]
 class MailController extends Controller
 {
-    public function resetPasswordAction()
+    #[Autowired] protected ViewInterface $view;
+
+    #[ViewPostMapping]
+    public function resetPasswordAction(): void
     {
         $this->view->setVars(
             [

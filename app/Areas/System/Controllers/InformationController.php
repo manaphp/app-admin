@@ -1,16 +1,31 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\System\Controllers;
 
 use App\Controllers\Controller;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
 use ManaPHP\Version;
+use ManaPHP\Viewing\View\Attribute\ViewMapping;
+use function apache_get_version;
+use function date;
+use function function_exists;
+use function get_declared_classes;
+use function get_loaded_extensions;
+use function implode;
+use function ini_get;
+use function php_ini_loaded_file;
+use function php_uname;
+use function sort;
 
-#[Authorize('@index')]
+#[Authorize]
+#[RequestMapping('/system/information')]
 class InformationController extends Controller
 {
-    public function indexView()
+    #[ViewMapping]
+    public function indexAction(): array
     {
         $data = [];
 
@@ -33,11 +48,7 @@ class InformationController extends Controller
         sort($loaded_extensions);
         $data['loaded_extensions'] = implode(', ', $loaded_extensions);
         $data['loaded_classes'] = get_declared_classes();
-        $this->view->setVar('data', $data);
-    }
 
-    public function indexAction()
-    {
-
+        return ['data' => $data];
     }
 }

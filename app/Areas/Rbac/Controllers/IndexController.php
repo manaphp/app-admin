@@ -1,15 +1,21 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Rbac\Controllers;
 
 use App\Controllers\Controller;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\ResponseInterface;
+use ManaPHP\Http\Router\Attribute\GetMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
 
+#[RequestMapping('')]
 class IndexController extends Controller
 {
-    #[Authorize('user')]
-    public function indexAction()
+    #[Authorize(Authorize::USER)]
+    #[GetMapping('/rbac')]
+    public function indexAction(): ResponseInterface
     {
         return $this->response->redirect('permission/');
     }

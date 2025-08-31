@@ -1,34 +1,51 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\System\Controllers;
 
-use App\Areas\System\Models\DotenvLog;
+use App\Areas\System\Entities\DotenvLog;
+use App\Areas\System\Repositories\DotenvLogRepository;
 use App\Controllers\Controller;
 use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\Router\Attribute\GetMapping;
+use ManaPHP\Http\Router\Attribute\PostMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
+use ManaPHP\Persistence\Page;
 use ManaPHP\Redis\RedisDbInterface;
+use ManaPHP\Viewing\View\Attribute\ViewGetMapping;
 
-#[Authorize('@index')]
+#[Authorize]
+#[RequestMapping('/system/dotenv')]
 class DotenvController extends Controller
 {
     #[Autowired] protected RedisDbInterface $redisDb;
+    #[Autowired] protected DotenvLogRepository $dotenvLogRepository;
 
     public const REDIS_KEY = '.env';
 
-    public function indexAction(string $app_id = '')
+    #[ViewGetMapping]
+    public function indexAction(string $app_id = ''): array
     {
         if ($app_id === '') {
             return [];
         } else {
             $current = [['app_id' => $app_id, 'env' => $this->redisDb->hGet(self::REDIS_KEY, $app_id) ?: '']];
-            $logs = DotenvLog::where(['app_id' => $app_id])->orderBy(['id' => SORT_DESC])->limit(10)->execute();
+            $restrictions = ['app_id' => $app_id];
+            $logs = $this->dotenvLogRepository->paginate(
+                $restrictions,
+                [],
+                ['id' => SORT_DESC],
+                Page::of(1, 10)
+            )->items;
 
             return compact('current', 'logs');
         }
     }
 
-    public function appsAction()
+    #[GetMapping]
+    public function appsAction(): array
     {
         $apps = $this->redisDb->hKeys(self::REDIS_KEY);
         sort($apps);
@@ -36,7 +53,8 @@ class DotenvController extends Controller
         return $apps;
     }
 
-    public function createAction(string $app_id, string $env)
+    #[PostMapping]
+    public function createAction(string $app_id, string $env): ?string
     {
         if ($this->redisDb->hExists(self::REDIS_KEY, $app_id)) {
             return "{$app_id}已存在";
@@ -47,12 +65,15 @@ class DotenvController extends Controller
         $dotenvLog->app_id = $app_id;
         $dotenvLog->env = $env;
 
-        $dotenvLog->create();
+        $this->dotenvLogRepository->create($dotenvLog);
 
         $this->redisDb->hSet(self::REDIS_KEY, $app_id, $env);
+
+        return null;
     }
 
-    public function editAction(string $app_id, string $env)
+    #[PostMapping]
+    public function editAction(string $app_id, string $env): string|int
     {
         if (!$this->redisDb->hExists(self::REDIS_KEY, $app_id)) {
             return "{$app_id}不存在";
@@ -67,12 +88,14 @@ class DotenvController extends Controller
         $dotenvLog->app_id = $app_id;
         $dotenvLog->env = $env;
 
-        $dotenvLog->create();
+        $this->dotenvLogRepository->create($dotenvLog);
 
         $this->redisDb->hSet(self::REDIS_KEY, $app_id, $env);
+        return 0;
     }
 
-    public function deleteAction(string $app_id)
+    #[PostMapping]
+    public function deleteAction(string $app_id): void
     {
         $this->redisDb->hDel(self::REDIS_KEY, $app_id);
     }

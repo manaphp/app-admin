@@ -6,11 +6,6 @@ Vue.prototype.sessionStorage = window.sessionStorage;
 Vue.prototype.localStorage = window.localStorage;
 Vue.prototype.console = console;
 
-CONTROLLER_URL = location.pathname.substr(BASE_URL.length);
-if (CONTROLLER_URL.endsWith('/index')) {
-    CONTROLLER_URL = CONTROLLER_URL.substr(0, CONTROLLER_URL.length - 6);
-}
-
 (function () {
     let urlKey = `last_url_query.${document.location.pathname}`;
     window.onbeforeunload = (e) => {
@@ -25,9 +20,8 @@ if (CONTROLLER_URL.endsWith('/index')) {
 }());
 
 
-document.location.query = document.location.search !== '' ? Qs.parse(document.location.search.substr(1)) : {};
+document.location.query = document.location.search !== '' ? Qs.parse(document.location.search.substring(1)) : {};
 
-axios.defaults.baseURL = BASE_URL;
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 axios.interceptors.request.use(function (config) {
@@ -35,7 +29,12 @@ axios.interceptors.request.use(function (config) {
         vm.loading = true;
     }
 
+    if (config.url.startsWith('/')) {
+        config.url = BASE_URL + config.url;
+    }
+
     config.url += config.url.indexOf('?') === -1 ? '?ajax' : '&ajax';
+
     return config;
 });
 
@@ -80,7 +79,7 @@ axios.interceptors.response.use(function (res) {
                     window.location.href = '/login';
                     break;
                 default:
-                    alert(error.response.message || '网络错误，请稍后重试: ' + error.response.status);
+                    alert(error.response.data.msg || '网络错误，请稍后重试: ' + error.response.status);
                     break;
             }
         } else {
@@ -88,7 +87,7 @@ axios.interceptors.response.use(function (res) {
         }
     });
 
-Vue.prototype.ajax_get = function (url, data, success) {
+Vue.prototype.ajaxGet = function (url, data, success) {
     if (typeof data === 'function') {
         success = data;
         data = null;
@@ -121,7 +120,7 @@ Vue.prototype.ajax_get = function (url, data, success) {
     });
 };
 
-Vue.prototype.ajax_post = function (url, data, success) {
+Vue.prototype.ajaxPost = function (url, data, success) {
     if (typeof data === 'function') {
         success = data;
         data = {};
@@ -152,7 +151,7 @@ Vue.filter('json', function (value) {
     return JSON.stringify(typeof value === 'string' ? JSON.parse(value) : value, null, 2);
 });
 
-Vue.component('pager', {
+Vue.component('m-pager', {
     template: ` 
  <el-pagination background :current-page="Number($root.response.page)"
        :page-size="Number($root.request.size)"
@@ -185,20 +184,15 @@ Vue.component('pager', {
     }
 });
 
-Vue.component('date-picker', {
+Vue.component('m-date-picker', {
     props: ['value'],
     template: `
 <el-date-picker v-model="time" type="daterange" 
     start-placeholder="开始日期" end-placeholder="结束日期" 
     value-format="yyyy-MM-dd" 
-    size="small"
-    :picker-options="pickerOptions" @change="change">
+    size="mini"
+    :picker-options="pickerOptions" @change="$emit('input', $event)">
 </el-date-picker>`,
-    methods: {
-        change(value) {
-            this.$emit('input', value);
-        }
-    },
     watch: {
         value(val) {
             this.time = val;
@@ -307,7 +301,7 @@ Vue.component('date-picker', {
     }
 });
 
-Vue.component('my-menu', {
+Vue.component('m-menu', {
     template: `
 <el-menu :default-active="active" class="el-menu-vertical-demo" :unique-opened="true">
     <template v-for="group in groups">
@@ -325,7 +319,7 @@ Vue.component('my-menu', {
      </template>
 </el-menu>`,
     created() {
-        this.ajax_get('/menu/my?cache=2', (res) => {
+        this.ajaxGet('/menu/my/index?cache=2', (res) => {
             this.groups = res;
 
             for (let group of res) {
@@ -360,7 +354,7 @@ Vue.component('my-menu-tabs', {
     template: `
 <el-tabs  @tab-remove="remove" @tab-click="click" class="my-menu-tabs" v-model="tab">
     <el-tab-pane label="首页" name="/"></el-tab-pane>
-    <el-tab-pane v-for="tab in tabs" :label="tab.name" closable :name="tab.url"></el-tab-pane>     
+    <el-tab-pane v-for="tab in tabs" :label="tab.name" closable :name="tab.url" :key="tab.url"></el-tab-pane>     
 </el-tabs>`,
     data() {
         let tabs = sessionStorage.getItem('.my-menu-tabs');
@@ -368,7 +362,7 @@ Vue.component('my-menu-tabs', {
 
         return {
             tabs: tabs,
-            tab: location.pathname.substr(window.BASE_URL.length)
+            tab: location.pathname.substring(window.BASE_URL.length)
         }
     },
     methods: {
@@ -391,7 +385,7 @@ Vue.component('my-menu-tabs', {
     }
 });
 
-Vue.component('axios-cache-switcher', {
+Vue.component('m-axios-cache-switcher', {
     template: `
 <div>
     <div v-if="enabled" @click="localStorage.setItem('axios.cache.enabled','0');enabled=false">缓存 (√)</div>
@@ -404,8 +398,8 @@ Vue.component('axios-cache-switcher', {
     }
 });
 
-Vue.component('system-time', {
-    template: '<span class="left" :title="diff.toFixed(3)" :style="{backgroundColor: bgColor}" style="cursor:pointer"" v-show="diff!==null&&time!==null" @click="update">{{time}}</span>',
+Vue.component('m-system-time', {
+    template: '<span class="left" :title="diff" :style="{backgroundColor: bgColor}" style="cursor:pointer"" v-show="diff!==null&&time!==null" @click="update">{{time}}</span>',
     data() {
         return {
             diff: null,
@@ -415,313 +409,359 @@ Vue.component('system-time', {
     },
     computed: {
         bgColor() {
-            return Math.abs(this.diff) >= 2 ? 'red' : 'parent';
+            return Math.abs(this.diff) >= 1 ? 'red' : 'parent';
         }
     },
     created() {
+        this.update();
         setInterval(() => {
             if (this.diff !== null) {
                 this.time = (moment().subtract(this.diff, 'seconds').format('YYYY-MM-DD hh:mm:ss'))
             }
         }, 1000);
-
-        let diff = window.sessionStorage.getItem(this.key);
-        if (diff === null) {
-            this.update();
-        } else {
-            this.diff = parseFloat(diff);
-        }
     },
     methods: {
         update() {
-            axios.get('/admin/time?t=' + Date.now()).then((res) => {
+            axios.get('/time/current?t=' + Date.now()).then((res) => {
                 if (res.data.code === 0) {
                     this.diff = Math.round(Date.now() - res.data.data.timestamp * 1000) / 1000;
-                    window.sessionStorage.setItem(this.key, this.diff);
                 }
             });
         }
     }
 });
 
-Vue.component('show-create', {
-    template: `<el-button @click="$root.createVisible=true;$emit('click');" type="primary" icon="el-icon-plus" size="small">新增{{$root.topic}}</el-button>`
+Vue.component('mb-create', {
+    template: `<el-button @click="$root.createVisible=true;$emit('click');" type="primary" icon="el-icon-plus" size="mini">{{$root.topic}}</el-button>`
 });
 
-Vue.component('show-edit', {
+Vue.component('mb-edit', {
+    props: ['row', 'disabled'],
+    template: `<el-button @click="$root.show_edit(row);$emit('click')" size="mini" type="primary" icon="el-icon-edit" title="编辑" :disabled="disabled"></el-button>`
+});
+
+Vue.component('mb-delete', {
     props: ['row'],
-    template: `<el-button @click="$root.show_edit(row);$emit('click')" size="mini" type="primary" icon="el-icon-edit" title="编辑"></el-button>`
-});
+    template: '<el-button @click="do_delete(row)" size="mini" type="danger" icon="el-icon-delete" title="删除"></el-button>',
+    methods: {
+        do_delete(row, name = '') {
+            let keys = Object.keys(row);
+            let key = keys[0];
 
-Vue.component('show-delete', {
-    props: ['row'],
-    template: '<el-button @click="$root.do_delete(row)" size="mini" type="danger" icon="el-icon-delete" title="删除"></el-button>'
-});
+            if (!name) {
+                name = (keys[1] && keys[1].indexOf('_name')) ? row[keys[1]] : row[key];
+            }
 
-Vue.component('show-detail', {
-    props: ['row', 'link'],
-    template: '<el-button @click="$root.show_detail(row,link)" size="mini" type="info" icon="el-icon-more" title="详情"></el-button>'
-});
-
-Vue.component('show-enable', {
-    props: ['row'],
-    template: `
-<el-button v-if="row.enabled" @click.native.prevent="$root.do_disable(row)" size="mini" type="danger" icon="el-icon-lock" title="禁用"></el-button>
-<el-button v-else @click.native.prevent="$root.do_enable(row)" size="mini" type="warning" icon="el-icon-unlock" title="启用"></el-button>`
-});
-
-Vue.component('create-dialog', {
-    template: `
-<el-dialog :title="'新增-'+$root.topic" :visible.sync="$root.createVisible" class="create-dialog">
-    <slot></slot>
-    <span slot="footer">
-        <el-button type="primary" @click="$root.do_create" size="small">创建</el-button>
-        <el-button @click="$root.createVisible = false; $root.$refs.create.resetFields()" size="small">取消</el-button>
-    </span>
-</el-dialog>`
-});
-
-Vue.component('edit-dialog', {
-    template: `
-<el-dialog :title="'编辑-'+$root.topic" :visible.sync="$root.editVisible" class="edit-dialog">
-    <slot></slot>
-    <span slot="footer">
-        <el-button type="primary" @click="$root.do_edit" size="small">保存</el-button>
-        <el-button @click="$root.editVisible=false" size="small">取消</el-button>
-    </span>
-</el-dialog>`
-});
-
-Vue.component('detail-dialog', {
-    template: `<el-dialog title="详情" :visible.sync="$root.detailVisible" class="detail-dialog"><slot></slot></el-dialog>`
-});
-
-Vue.component('result-table', {
-    props: ['data'],
-    template: `
-<div class="result-table">
-    <el-table v-if="data" :data="data" border size="small">
-        <slot></slot>
-    </el-table>
-    <template v-else-if="$root.request.page">
-        <pager></pager>
-        <el-table :data="$root.response.items" border size="small">
-            <slot></slot>
-        </el-table>
-        <pager></pager>
-    </template>
-    <el-table v-else :data="$root.response" border size="small">
-        <slot></slot>
-    </el-table>
-</div>`,
-});
-
-Vue.component('selector', {
-    props: ['value', 'data', 'disabled'],
-    template: `
-<span>
-    <el-select v-model="val" size="small" clearable style="width: 150px" @change="$emit('input', $event)" :disabled="disabled" v-bind="$attrs">
-        <el-option v-for="item in extract_ill(data)" :key="item.id" :label="item.label" :value="String(item.id)"></el-option>
-    </el-select>
-</span>`,
-    data() {
-        return {val: String(this.value)};
-    },
-    watch: {
-        value(val) {
-            this.val = String(val);
+            if (window.event.ctrlKey) {
+                this.ajaxPost("delete", {[key]: row[key]}, () => this.$root.reload());
+            } else {
+                this.$confirm('确认删除 `' + (name ? name : row[key]) + '` ?').then(() => {
+                    this.ajaxPost("delete", {[key]: row[key]}, () => this.$root.reload());
+                });
+            }
         }
     }
 });
 
-Vue.component('request-form', {
+Vue.component('mb-detail', {
+    props: ['row', 'link'],
+    template: '<el-button @click="show_detail(row,link)" size="mini" type="info" icon="el-icon-more" title="详情"></el-button>',
+    methods: {
+        show_detail(row, action) {
+            this.$root.detailVisible = true;
+
+            let key = Object.keys(row)[0];
+            this.ajaxGet((action ? action : "detail"), {[key]: row[key]}, (res) => {
+                this.$root.detail = res;
+            });
+        }
+    }
+});
+
+Vue.component('mb-enable', {
+    props: ['row'],
     template: `
-<div class="request-form">
-    <el-button v-if="$root.create" @click="$root.createVisible=true;$emit('open-create');" type="primary" icon="el-icon-plus" size="small">新增{{$root.topic}}</el-button>
-    <slot></slot>   
+<el-button v-if="row.enabled" @click.native.prevent="do_disable(row)" size="mini" type="danger" icon="el-icon-lock" title="禁用"></el-button>
+<el-button v-else @click.native.prevent="do_enable(row)" size="mini" type="warning" icon="el-icon-unlock" title="启用"></el-button>`,
+    methods: {
+        do_enable(row) {
+            let key = Object.keys(row)[0];
+            this.ajaxPost("enable", {[key]: row[key]}, () => row.enabled = 1);
+        },
+        do_disable(row) {
+            let key = Object.keys(row)[0];
+            this.ajaxPost("disable", {[key]: row[key]}, () => row.enabled = 0);
+        }
+    }
+});
+
+Vue.component('m-table', {
+    provide() {
+        return {
+            parentTag: 'm-table',
+            mode: '',
+        }
+    },
+    props: ['data'],
+    template: `
+<div class="m-table">
+    <el-table v-if="data" :data="data" border size="mini">
+        <slot></slot>
+    </el-table>
+    <template v-else-if="$root.request.page">
+        <m-pager></m-pager>
+        <el-table :data="$root.response.items" border size="mini">
+            <slot></slot>
+        </el-table>
+        <m-pager></m-pager>
+    </template>
+    <el-table v-else :data="$root.response" border size="mini">
+        <slot></slot>
+    </el-table>
 </div>`,
 });
 
-Vue.component('request-text', {
-    props: ['prop', 'width', 'placeholder'],
+Vue.component('m-selector', {
+    props: ['value', 'data', 'disabled'],
     template: `
-<el-input v-model.trim="$root.request[prop]"
-    size="small" clearable 
-    :style="{width: (width||150)+'px'}"
-    :placeholder="placeholder||$root.label[prop]||prop"
-    v-bind="$attrs">
-</el-input>`
+<span>
+    <el-select :value="value2" size="mini" clearable style="width: 150px" @change="$emit('input', $event)" :disabled="disabled" v-bind="$attrs">
+        <el-option v-for="item in items" :key="item.value" :label="item.label" :value="item.value"></el-option>
+    </el-select>
+</span>`,
+    computed: {
+        value2() {
+            // noinspection EqualityComparisonWithCoercionJS
+            let item = this.items.find(option => option.value == this.value);
+            return item ? item.value : null;
+        },
+        items() {
+            if (Array.isArray(this.data)) {
+                if (typeof this.data[0] === 'object') {
+                    return this.data.map(v => {
+                        let [value, label] = Object.values(v);
+                        return {value, label};
+                    });
+                } else {
+                    return this.data.map(v => ({value: v, label: v}));
+                }
+            } else if (typeof this.data === 'object') {
+                let items = [];
+                for (let key in this.data) {
+                    items.push({value: key, label: this.data[key]});
+                }
+                return items;
+            }
+        }
+    }
 });
 
-Vue.component('request-date', {
+Vue.component('m-navbar', {
+    provide() {
+        return {
+            parentTag: 'm-navbar',
+            mode: this.mode,
+        }
+    },
+    props: ['mode'],
+    template: `
+<div class="m-navbar" mode=""><slot></slot></div>`,
+});
+
+Vue.component('m-date', {
     props: ['prop'],
-    template: `<date-picker v-model.trim="$root.request[prop]"></date-picker>`
+    template: `<span><slot></slot><m-date-picker v-model.trim="$root.request[prop]"></m-date-picker></span>`
 });
 
-Vue.component('request-select', {
-    props: ['prop', 'data'],
-    template: `<selector v-model.trim="$root.request[prop]" :data="data"></selector>`
-});
-
-Vue.component('request-button', {
-    template: `<el-button size="small" @click="$emit('click')" v-bind="$attrs""><slot></slot></el-button>`
-});
-
-Vue.component('create-form', {
+Vue.component('m-dialog', {
+    provide() {
+        return {
+            parentTag: 'm-dialog',
+            mode: this.mode,
+        }
+    },
+    props: ['mode'],
     template: `
-<el-dialog :title="'新增-'+$root.topic" :visible.sync="$root.createVisible" class="create-dialog" @opened="$root.$refs.create=$refs.create">
+<div>
+<el-dialog v-if="mode==='create'" :title="'新增-'+$root.topic" :visible.sync="$root.createVisible" class="create-dialog" @open="focusFirstInput" @opened="$root.$refs.create=$refs.create">
     <el-form :model="$root.create" ref="create" size="small">
         <slot></slot>
     </el-form>
     <span slot="footer">
-         <el-button type="primary" @click="$root.do_create" size="small">创建</el-button>
+         <el-button type="primary" @click="do_create" size="small">创建</el-button>
         <el-button @click="$root.createVisible = false; $root.$refs.create.resetFields()" size="small">取消</el-button>
     </span>
-</el-dialog>`,
-});
-
-Vue.component('create-text', {
-    props: ['label', 'prop', 'disabled'],
-    template: `
-<el-form-item :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
-    <el-input v-model="$root.create[prop]" auto-complete="off" :disabled="disabled" @change="$emit('input', $event)"></el-input>
-</el-form-item>`
-});
-
-Vue.component('create-textarea', {
-    props: ['label', 'prop', 'rows', 'disabled'],
-    template: `
-<el-form-item :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
-    <el-input v-model="$root.create[prop]" auto-complete="off" type="textarea" :rows="rows" :disabled="disabled" @change="$emit('input', $event)"></el-input>
-</el-form-item>`
-});
-
-Vue.component('create-checkbox', {
-    props: ['label', 'prop', 'disabled'],
-    template: `
-<el-form-item :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
-    <el-checkbox v-model="$root.create[prop]" :disabled="disabled"><slot></slot></el-checkbox>
-</el-form-item>`
-});
-
-Vue.component('create-radio', {
-    props: ['label', 'prop', 'data', 'disabled'],
-    template: `
-<el-form-item :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
-    <el-radio-group v-model="$root.create[prop]" :disabled="disabled">
-        <el-radio v-for="(status, id) in data" :label="id" :key="id">{{status}}</el-radio>
-    </el-radio-group>
-</el-form-item>`
-});
-
-Vue.component('create-select', {
-    props: ['label', 'prop', 'data', 'disabled'],
-    template: `
-<el-form-item :label="(label||$root.label[prop]||prop)+':'">
-    <selector v-model="$root.create[prop]" :data="data" :disabled="disabled" v-bind="$attrs"></selector>
-</el-form-item>`
-});
-
-Vue.component('create-switch', {
-    props: ['label', 'prop', 'disabled'],
-    template: `
-<el-form-item :label="(label||$root.label[prop]||prop)+':'">
-    <el-switch v-model="$root.create[prop]" :disabled="disabled"></el-switch>
-</el-form-item>`
-});
-
-Vue.component('edit-form', {
-    template: `
-<el-dialog :title="'编辑-'+$root.topic" :visible.sync="$root.editVisible" class="edit-dialog" @opened="$root.$refs.edit=$refs.edit">
+</el-dialog>
+<el-dialog v-if="mode==='edit'" :title="'编辑-'+$root.topic" :visible.sync="$root.editVisible" class="edit-dialog" @open="focusFirstInput" @opened="$root.$refs.edit=$refs.edit">
      <el-form :model="$root.edit" ref="edit" size="small">
         <slot></slot>
     </el-form>
     <span slot="footer">
-        <el-button type="primary" @click="$root.do_edit" size="small">保存</el-button>
+        <el-button type="primary" @click="do_edit" size="small">保存</el-button>
         <el-button @click="$root.editVisible=false" size="small">取消</el-button>
     </span>
-</el-dialog>`,
+</el-dialog>
+<el-dialog v-if="mode==='detail'" title="详情" :visible.sync="$root.detailVisible" class="detail-dialog" @open="focusFirstInput" @opened="$root.$refs.detail=$refs.detail">
+    <el-form :model="$root.detail" ref="detail" label-width="150px" size="mini">
+        <slot></slot>
+    </el-form>
+</el-dialog>
+</div>`,
+    methods: {
+        do_create(create) {
+            let success = true;
+
+            if (typeof create === 'string') {
+                this.$root.$refs[create].validate(valid => success = valid);
+            }
+            success && this.ajaxPost("create", this.$root.create, (res) => {
+                this.$root.createVisible = false;
+                this.$root.$refs.create.resetFields();
+                this.$root.reload();
+            });
+        },
+        do_edit() {
+            this.ajaxPost("edit", this.$root.edit, () => {
+                this.$root.editVisible = false;
+                this.$root.reload();
+            });
+        },
+        beforeCreate() {
+            this.$root.hasDetail = true;
+        },
+        focusFirstInput() {
+            this.$nextTick(() => {
+                const firstInput = this.$el.querySelector('input, textarea, [contenteditable]');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            });
+        }
+    }
 });
-Vue.component('edit-text', {
+
+Vue.component('m-text', {
+    inject: ['parentTag', 'mode'],
+    props: ['label', 'prop', 'disabled', 'width', 'placeholder', 'title', 'prefix', 'suffix'],
+    template: `
+<el-input v-if="parentTag==='m-navbar'" v-model.trim="$root.request[prop]"
+    size="mini" clearable 
+    :style="{width: (width||150)+'px'}"
+    :placeholder="placeholder||$root.label[prop]||prop"
+    v-bind="$attrs">
+</el-input>
+<el-table-column v-else-if="parentTag==='m-table'" :prop="prop" :label="label||$root.label[prop]||prop" v-bind="$attrs" :width="width" v-slot="{row}">
+    <slot :row="row"><span :title="title?row[title]:''">{{prefix}}{{$attrs['formatter']?$attrs['formatter'](row, prop, getProp(row,prop)):getProp(row,prop)}}{{suffix}}</span></slot>
+</el-table-column>
+<el-form-item v-else-if="mode==='detail'" :label="(label||$root.label[prop]||prop)+':'">{{ $root.detail[prop]}}</el-form-item>
+ <el-form-item v-else :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
+     <el-input v-model="$root[mode][prop]" auto-complete="off" :disabled="disabled" @change="$emit('input', $event)"></el-input>
+ </el-form-item>`
+});
+
+Vue.component('m-textarea', {
+    inject: ['parentTag', 'mode'],
+    props: ['label', 'prop', 'rows', 'disabled'],
+    template: `
+<el-form-item :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
+    <el-input v-model="$root[mode][prop]" auto-complete="off" type="textarea" :rows="rows" :disabled="disabled" @change="$emit('input', $event)"></el-input>
+</el-form-item>`
+});
+
+Vue.component('m-checkbox', {
+    inject: ['parentTag', 'mode'],
     props: ['label', 'prop', 'disabled'],
     template: `
 <el-form-item :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
-    <el-input v-model="$root.edit[prop]" auto-complete="off" :disabled="disabled" @change="$emit('input', $event)"></el-input>
+    <el-checkbox v-model="$root[mode][prop]" :disabled="disabled"><slot></slot></el-checkbox>
 </el-form-item>`
 });
 
-Vue.component('edit-textarea', {
-    props: ['label', 'prop', 'disabled', 'rows'],
+Vue.component('m-radio', {
+    inject: ['parentTag', 'mode'],
+    props: ['label', 'prop', 'data', 'disabled'],
+    computed: {
+        radios() {
+            return this.isString(this.data) ? this.$root[this.data] : this.data;
+        }
+    },
     template: `
 <el-form-item :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
-    <el-input v-model="$root.edit[prop]" auto-complete="off" type="textarea" :disabled="disabled" @change="$emit('input', $event)" :rows="rows"></el-input>
-</el-form-item>`
-});
-
-Vue.component('edit-select', {
-    props: ['label', 'prop', 'data', 'disabled'],
-    template: `
-<el-form-item :label="(label||$root.label[prop]||prop)+':'">
-    <selector v-model="$root.edit[prop]" :disabled="disabled" :data="data"></selector>
-</el-form-item>`
-});
-
-Vue.component('edit-radio', {
-    props: ['label', 'prop', 'data', 'disabled'],
-    template: `
-<el-form-item :label="(label||$root.label[prop]||prop)+':'" :prop="prop">
-    <el-radio-group v-model="$root.edit[prop]" :disabled="disabled">
-        <el-radio v-for="(status, id) in data" :label="id" :key="id">{{status}}</el-radio>
+    <el-radio-group v-model="$root[mode][prop]" :disabled="disabled">
+        <el-radio v-for="(status, id) in radios" :label="id" :key="id">{{status}}</el-radio>
     </el-radio-group>
 </el-form-item>`
 });
 
-Vue.component('detail-form', {
+Vue.component('m-select', {
+    inject: ['parentTag', 'mode'],
+    props: ['label', 'prop', 'data', 'disabled'],
     template: `
-<el-dialog title="详情" :visible.sync="$root.detailVisible" class="detail-dialog" @opened="$root.$refs.detail=$refs.detail">
-    <el-form :model="$root.detail" ref="detail" label-width="150px" size="mini">
-        <slot></slot>
-    </el-form>
-</el-dialog>`,
-    beforeCreate() {
-        this.$root.hasDetail = true;
+<m-selector v-if="parentTag==='m-navbar'" v-model.trim="$root.request[prop]" :data="isString(data)?$root[data]:data"></m-selector>
+<el-form-item v-else :label="(label||$root.label[prop]||prop)+':'">
+    <m-selector v-model="$root[mode][prop]" :data="isString(data)?$root[data]:data" :disabled="disabled" v-bind="$attrs"></m-selector>
+</el-form-item>`
+});
+
+Vue.component('m-switch', {
+    inject: ['parentTag', 'mode'],
+    props: ['label', 'prop', 'disabled'],
+    template: `
+<el-form-item :label="(label||$root.label[prop]||prop)+':'">
+    <el-switch v-model="$root[mode][prop]" :disabled="disabled"></el-switch>
+</el-form-item>`
+});
+
+Vue.component('m-timestamp', {
+    inject: ['parentTag'],
+    props: ['label', 'prop', 'disabled'],
+    template: `
+<el-table-column v-if="parentTag==='m-table'" :prop="prop" :label="label||$root.label[prop]||prop" :formatter="formatDate" width="123"></el-table-column>
+<el-form-item v-else :label="(label||$root.label[prop]||prop)+':'">{{ $root.detail[prop]|date}}</el-form-item>`,
+    methods: {
+        formatDate(row, column, value) {
+            return value ? this.$moment(value * 1000).format('YYYY-MM-DD HH:mm:ss') : '';
+        }
     }
 });
 
-Vue.component('detail-text', {
+Vue.component('m-time', {
+    inject: ['parentTag'],
     props: ['label', 'prop', 'disabled'],
-    template: `<el-form-item :label="(label||$root.label[prop]||prop)+':'">{{ $root.detail[prop]}}</el-form-item>`
+    template: `
+<el-table-column v-if="parentTag==='m-table'" :prop="prop" :label="label||$root.label[prop]||prop" :formatter="formatDate" width="80"></el-table-column>
+<el-form-item v-else :label="(label||$root.label[prop]||prop)+':'">{{ $root.detail[prop]|date}}</el-form-item>`,
+    methods: {
+        formatDate(row, column, value) {
+            return value ? this.$moment(value * 1000).format('MM-DD HH:mm') : '';
+        }
+    }
 });
 
-Vue.component('detail-timestamp', {
-    props: ['label', 'prop', 'disabled'],
-    template: `<el-form-item :label="(label||$root.label[prop]||prop)+':'">{{ $root.detail[prop]|date}}</el-form-item>`
-});
-
-Vue.component('detail-json', {
+Vue.component('m-json', {
     props: ['label', 'prop', 'disabled'],
     template: `<el-form-item :label="(label||$root.label[prop]||prop)+':'"><pre>{{ $root.detail[prop]|json}}</pre></el-form-item>`
 });
 
-Vue.component('result-index', {
+Vue.component('m-index', {
     template: `<el-table-column type="index" label="#" width="50"></el-table-column>`
 });
 
-Vue.component('result-id', {
+Vue.component('m-id', {
     props: ['label', 'prop'],
     template: `<el-table-column :prop="prop" :label="label||$root.label[prop]||prop" width="100"></el-table-column>`
 });
 
-Vue.component('result-account', {
+Vue.component('m-account', {
     props: ['label', 'prop'],
     template: `<el-table-column :prop="prop" :label="label||$root.label[prop]||prop" width="100"></el-table-column>`
 });
 
-Vue.component('result-email', {
+Vue.component('m-email', {
     template: `<el-table-column prop="email" label="邮箱" with="250" show-overflow-tooltip></el-table-column>`
 });
 
-Vue.component('result-ip', {
+Vue.component('m-ip', {
     props: ['label', 'prop'],
     template: `
 <el-table-column :prop="prop" :label="label||$root.label[prop]||prop" width="120" v-slot="{row}">
@@ -730,48 +770,47 @@ Vue.component('result-ip', {
 </el-table-column>`
 });
 
-Vue.component('result-enabled', {
-    template: `<el-table-column prop="enabled" :formatter="$root.fEnabled" label="状态" width="100"></el-table-column>`
-});
-
-Vue.component('result-timestamp', {
-    props: ['label', 'prop'],
-    template: `<el-table-column :prop="prop" :label="label||$root.label[prop]||prop" :formatter="$root.fDate" width="123"></el-table-column>`
-});
-
-Vue.component('result-column', {
-    props: ['label', 'prop'],
-    template: `
-<el-table-column :prop="prop" :label="label||$root.label[prop]||prop" v-bind="$attrs" v-slot="{row}">
-    <slot :row="row">{{$attrs['formatter']?$attrs['formatter'](row, prop, getProp(row,prop)):getProp(row,prop)}}</slot>
-</el-table-column>`,
+Vue.component('m-enabled', {
+    template: `<el-table-column prop="enabled" :formatter="formatEnabled" label="状态" width="100"></el-table-column>`,
     methods: {
-        getProp(row, prop) {
-            if (prop === undefined) {
-                return '';
-            }
-            let v = row;
-            for (let part of prop.split('.')) {
-                if (!v.hasOwnProperty(part)) {
-                    return '';
-                }
-                v = v[part];
-            }
-
-            return v;
+        formatEnabled(row, column, value) {
+            return ['禁用', '启用'][value];
         }
     }
 });
 
-Vue.component('result-tag', {
+Vue.component('m-pct100', {
+    props: ['label', 'prop', 'title'], template: `
+<el-table-column :prop="prop" :label="label||$root.label[prop]||prop" v-bind="$attrs" v-slot="{row}" width="60">
+    <slot :row="row"><span :title="title?row[title]:''" :style="{color:getProp(row,prop)>0?'red':'green'}">{{$attrs['formatter']?$attrs['formatter'](row, prop, getProp(row,prop)):getProp(row,prop)}}%</span></slot>
+</el-table-column>`
+});
+
+Vue.component('m-tag', {
     props: ['label', 'prop'],
     template: `
 <el-table-column :label="label||$root.label[prop]||prop" v-bind="$attrs" v-slot="{row}">
-    <el-tag size="small" v-for="item in extract_ill(row[prop])" :key="item.id">{{item.label}}</el-tag>
+    <el-tag size="mini" v-for="item in extractItems(row[prop])" :key="item.id">{{item.label}}</el-tag>
 </el-table-column>`,
+    methods: {
+        extractItems(data) {
+            if (!Array.isArray(data)) {
+                return [];
+            } else if (!data || data.length === 0) {
+                return [];
+            } else if (typeof data[0] === 'object') {
+                return data.map(v => {
+                    let [id, label] = Object.values(v);
+                    return {id, label};
+                });
+            } else {
+                return data.map(v => ({id: v, label: v}));
+            }
+        }
+    }
 });
 
-Vue.component('result-link', {
+Vue.component('m-link', {
     props: ['label', 'prop', 'href'],
     template: `
 <el-table-column :label="label||$root.label[prop]||prop" width="100" v-slot="{row}">
@@ -779,40 +818,51 @@ Vue.component('result-link', {
 </el-table-column>`
 });
 
-Vue.component('result-op', {
-    props: ['show-detail', 'detail-link', 'show-edit', 'show-enable', 'show-delete', 'width'],
-    template: `
-<el-table-column fixed="right" label="操作" :width="calcWidth()" v-slot="{row}">
-    <show-detail v-if="$root.hasDetail&&showDetail!==false" :row="row" :link="detailLink"></show-detail>
-    <show-edit v-if="$root.edit&&showEdit!==false" :row="row"></show-edit>
-    <slot :row="row"></slot>
-    <show-enable v-if="showEnable===''||showEnable===true" :row="row"></show-enable>
-    <show-delete v-if="showDelete===''||showDelete===true" :row="row"></show-delete>
-</el-table-column>`,
-    methods: {
-        calcWidth() {
-            if (this.width > 0) {
-                return this.width;
-            }
-
-            let count = 0;
-            count += !!this.$root.hasDetail && this.showDetail !== false;
-            count += !!this.$root.edit && this.showEdit !== false;
-            count += this.showEnable === '' || this.showEnable === true;
-            count += this.showDelete === '' || this.showDelete === true;
-
-            return count * 80;
-        }
+Vue.component('m-ops', {
+    props: ['ops'],
+    computed: {
+        items() {
+            return this.ops.split(',').map(op => op.trim())
+        },
     }
-});
+    ,
+    template: `
+<el-table-column fixed="right" label="操作" v-bind="$attrs" v-slot="{row}" :width="(items.length*60)+'px'">
+    <span style="display: inline-block; text-align: center; width: 100%;">
+    <template v-if="ops" v-for="op in items">
+        <component :is="'mb-'+op" :row="row"></component>
+    </template>
+     <slot :row="row"></slot>
+     </span>
+</el-table-column>`
+})
+;
 
-Vue.component('result-button', {
+Vue.component('m-button', {
     template: `<el-button size="mini" v-bind="$attrs" @click="$emit('click')"><slot></slot></el-button>`
 });
 
-Vue.prototype.format_date = function (value) {
-    return value ? this.$moment(value * 1000).format('YYYY-MM-DD HH:mm:ss') : '';
-};
+Vue.component('m-my-menu', {
+    template: `
+     <el-dropdown-menu slot="dropdown" trigger="click">
+                        <el-dropdown-item>
+                            <m-axios-cache-switcher></m-axios-cache-switcher>
+                        </el-dropdown-item>
+                        <el-dropdown-item>
+                            <el-link :href="BASE_URL+'/admin/login-log/latest'" target="_self">最近登录</el-link>
+                        </el-dropdown-item>
+                        <el-dropdown-item>
+                            <el-link :href="BASE_URL+'/admin/action-log/latest'" target="_self">最近操作</el-link>
+                        </el-dropdown-item>
+                        <el-dropdown-item>
+                            <el-link :href="BASE_URL+'/admin/password/change'" target="_self">修改密码</el-link>
+                        </el-dropdown-item>
+                        <el-dropdown-item>
+                            <el-link :href="BASE_URL+'/admin/session/logout'" target="_self">退出</el-link>
+                        </el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>`
+});
 
 Vue.prototype.auto_reload = function () {
     if (this.request && this.response) {
@@ -825,20 +875,27 @@ Vue.prototype.auto_reload = function () {
     }
 };
 
-Vue.prototype.extract_ill = function (data) {
-    if (!Array.isArray(data)) {
-        return [];
-    } else if (!data || data.length === 0) {
-        return [];
-    } else if (typeof data[0] === 'object') {
-        return data.map(v => {
-            let [id, label] = Object.values(v);
-            return {id, label};
-        });
-    } else {
-        return data.map(v => ({id: v, label: v}));
+Vue.prototype.isString = function (v) {
+    return typeof v === 'string';
+}
+
+Vue.prototype.getProp = function (row, prop) {
+    if (prop === undefined) {
+        return '';
     }
-};
+    let v = row;
+    for (let part of prop.split('.')) {
+        if (v === null) {
+            return ''
+        }
+        if (!v.hasOwnProperty(part)) {
+            return '';
+        }
+        v = v[part];
+    }
+
+    return v;
+}
 
 App = Vue.extend({
     data() {
@@ -863,6 +920,9 @@ App = Vue.extend({
                 tag: 'Tag',
                 icon: '图标',
                 path: '路径',
+                builtin: '内置',
+                enabled: "启用",
+                type: '类别',
             },
             createVisible: false,
             editVisible: false,
@@ -878,7 +938,7 @@ App = Vue.extend({
 
             let qs = this.$qs.stringify(this.request);
             window.history.replaceState(null, null, qs ? ('?' + qs) : '');
-            document.location.query = document.location.search !== '' ? Qs.parse(document.location.search.substr(1)) : {};
+            document.location.query = document.location.search !== '' ? Qs.parse(document.location.search.substring(1)) : {};
 
             if (Array.isArray(this.response)) {
                 this.response = [];
@@ -890,24 +950,6 @@ App = Vue.extend({
                 } else {
                     this.response = res.data.data;
                 }
-            });
-        },
-        fDate(row, column, value) {
-            return this.format_date(value);
-        },
-
-        fEnabled(row, column, value) {
-            return ['禁用', '启用'][value];
-        },
-        do_create(create) {
-            let success = true;
-            if (typeof create === 'string') {
-                this.$refs[create].validate(valid => success = valid);
-            }
-            success && this.ajax_post(CONTROLLER_URL + "/create", this.create, (res) => {
-                this.createVisible = false;
-                this.$refs.create.resetFields();
-                this.reload();
             });
         },
         show_edit(row, overwrite = {}) {
@@ -925,44 +967,6 @@ App = Vue.extend({
             }
 
             this.editVisible = true;
-        },
-        do_edit() {
-            this.ajax_post(CONTROLLER_URL + "/edit", this.edit, () => {
-                this.editVisible = false;
-                this.reload();
-            });
-        },
-        show_detail(row, action) {
-            this.detailVisible = true;
-
-            let key = Object.keys(row)[0];
-            this.ajax_get(CONTROLLER_URL + '/' + (action ? action : "detail"), {[key]: row[key]}, (res) => {
-                this.detail = res;
-            });
-        },
-        do_delete(row, name = '') {
-            let keys = Object.keys(row);
-            let key = keys[0];
-
-            if (!name) {
-                name = (keys[1] && keys[1].indexOf('_name')) ? row[keys[1]] : row[key];
-            }
-
-            if (window.event.ctrlKey) {
-                this.ajax_post(CONTROLLER_URL + "/delete", {[key]: row[key]}, () => this.reload());
-            } else {
-                this.$confirm('确认删除 `' + (name ? name : row[key]) + '` ?').then(() => {
-                    this.ajax_post(CONTROLLER_URL + "/delete", {[key]: row[key]}, () => this.reload());
-                });
-            }
-        },
-        do_enable(row) {
-            let key = Object.keys(row)[0];
-            this.ajax_post(CONTROLLER_URL + "/enable", {[key]: row[key]}, () => row.enabled = 1);
-        },
-        do_disable(row) {
-            let key = Object.keys(row)[0];
-            this.ajax_post(CONTROLLER_URL + "/disable", {[key]: row[key]}, () => row.enabled = 0);
         }
     },
 });

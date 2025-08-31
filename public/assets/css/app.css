@@ -102,7 +102,7 @@
 }
 
 .el-dialog .el-form-item {
-    margin-bottom: 3px;
+    margin-bottom: 15px !important;
 }
 
 .el-message-box.error-response {
@@ -171,4 +171,8 @@
 
 .el-main {
     padding-top: 1px;
+}
+
+.el-date-editor--daterange{
+    width: 250px !important;
 }

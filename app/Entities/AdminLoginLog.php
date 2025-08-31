@@ -1,14 +1,16 @@
 <?php
+
 declare(strict_types=1);
 
-namespace App\Models;
+namespace App\Entities;
 
-use ManaPHP\Model\Attribute\PrimaryKey;
+use ManaPHP\Persistence\Attribute\Id;
 
-#[PrimaryKey('login_id')]
-class AdminLoginLog extends Model
+class AdminLoginLog extends Entity
 {
+    #[Id]
     public int $login_id;
+
     public int $admin_id;
     public string $admin_name;
     public string $client_ip;

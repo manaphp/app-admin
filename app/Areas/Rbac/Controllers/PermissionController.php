@@ -1,85 +1,79 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Rbac\Controllers;
 
-use App\Areas\Rbac\Models\Permission;
-use App\Areas\Rbac\Models\Role;
-use App\Areas\Rbac\Models\RolePermission;
+use App\Areas\Rbac\Entities\Permission;
+use App\Areas\Rbac\Repositories\PermissionRepository;
+use App\Areas\Rbac\Repositories\RolePermissionRepository;
+use App\Areas\Rbac\Services\PermissionService;
+use App\Areas\Rbac\Services\RoleService;
 use App\Controllers\Controller;
 use ManaPHP\Di\Attribute\Autowired;
-use ManaPHP\Http\AuthorizationInterface;
 use ManaPHP\Http\Controller\Attribute\Authorize;
-use ManaPHP\Http\ControllersInterface;
+use ManaPHP\Http\ResponseInterface;
+use ManaPHP\Http\Router\Attribute\GetMapping;
+use ManaPHP\Http\Router\Attribute\PostMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
+use ManaPHP\Persistence\Restrictions;
+use ManaPHP\Viewing\View\Attribute\ViewGetMapping;
 
-#[Authorize('@index')]
+#[Authorize]
+#[RequestMapping('/rbac/permission')]
 class PermissionController extends Controller
 {
-    #[Autowired] protected AuthorizationInterface $authorization;
-    #[Autowired] protected ControllersInterface $controllers;
+    #[Autowired] protected PermissionRepository $permissionRepository;
+    #[Autowired] protected RolePermissionRepository $rolePermissionRepository;
+    #[Autowired] protected PermissionService $permissionService;
+    #[Autowired] protected RoleService $roleService;
 
-    public function indexAction()
+    #[ViewGetMapping]
+    public function indexAction(): array
     {
-        return Permission::select()
-            ->whereCriteria($this->request->all(), ['permission_id'])
-            ->with(['roles' => 'role_id, display_name'])
-            ->orderBy(['permission_id' => SORT_DESC]);
+        $fields = ['roles' => ['role_id', 'display_name']];
+        $restrictions = Restrictions::of($this->request->all(), ['permission_id']);
+        $orders = ['permission_id' => SORT_DESC];
+
+        return $this->permissionRepository->all($restrictions, $fields, $orders);
     }
 
-    public function listAction()
+    #[GetMapping]
+    public function listAction(): array
     {
-        return Permission::select(['permission_id', 'handler', 'display_name'])->orderBy(['handler' => SORT_ASC]);
+        $fields = ['permission_id', 'permission_code', 'display_name'];
+        $orders = ['permission_code' => SORT_ASC];
+        return $this->permissionRepository->all([], $fields, $orders);
     }
 
-    public function rebuildAction()
+    #[PostMapping]
+    public function rebuildAction(): ResponseInterface
     {
-        $count = 0;
-        foreach ($this->controllers->getControllers() as $controller) {
-            foreach ($this->authorization->getPermissions($controller) as $handler) {
-                if (Permission::exists(['handler' => $handler])) {
-                    continue;
-                }
+        $counts = $this->permissionService->rebuild();
 
-                $permission = new Permission();
-                $permission->handler = $handler;
-                $permission->display_name = $handler;
-                $permission->create();
+        $this->roleService->ensureBuiltinExists();
+        $this->roleService->rebuildPermissions();
 
-                $count++;
-            }
-        }
+        $createdCount = $counts['create'];
+        $updatedCount = $counts['update'];
+        $deletedCount = $counts['delete'];
 
-        foreach (['guest', 'user', 'admin'] as $role_name) {
-            if (!Role::exists(['role_name' => $role_name])) {
-                $role = new Role();
-                $role->role_name = $role_name;
-                $role->display_name = $role_name;
-                $role->enabled = 1;
-                $role->permissions = '';
-                $role->create();
-            }
-        }
-
-        foreach (Role::all() as $role) {
-            $permission_ids = RolePermission::values('permission_id', ['role_id' => $role->role_id]);
-            $granted = Permission::values('handler', ['permission_id' => $permission_ids]);
-            $role_permissions = $this->authorization->buildAllowed($role->role_name, $granted);
-            $role->permissions = ',' . implode(',', $role_permissions) . ',';
-            $role->update();
-        }
-
-        return ['code' => 0, 'message' => "新增 $count 条"];
+        return $this->response->json(
+            ['code' => 0, 'msg' => "新增 $createdCount 条，删除$deletedCount 条, 更新 $updatedCount 条"]
+        );
     }
 
-    public function editAction(Permission $permission)
+    #[PostMapping]
+    public function editAction(): Permission
     {
-        return $permission->fillUpdate($this->request->all());
+        return $this->permissionRepository->update($this->request->all());
     }
 
-    public function deleteAction(Permission $permission)
+    #[PostMapping]
+    public function deleteAction(int $permission_id): ?Permission
     {
-        RolePermission::deleteAll(['permission_id' => $permission->permission_id]);
+        $this->rolePermissionRepository->deleteAll(['permission_id' => $permission_id]);
 
-        return $permission->delete();
+        return $this->permissionRepository->deleteById($permission_id);
     }
 }

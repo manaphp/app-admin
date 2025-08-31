@@ -1,72 +1,100 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Rbac\Controllers;
 
-use App\Areas\Rbac\Models\AdminRole;
-use App\Areas\Rbac\Models\Role;
+use App\Areas\Rbac\Entities\AdminRole;
+use App\Areas\Rbac\Repositories\AdminRoleRepository;
+use App\Areas\Rbac\Repositories\RoleRepository;
 use App\Controllers\Controller;
-use App\Models\Admin;
-use ManaPHP\Http\Controller\Attribute\AcceptVerbs;
+use App\Entities\Admin;
+use App\Repositories\AdminRepository;
+use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\Controller\Attribute\Authorize;
 use ManaPHP\Http\InputInterface;
-use ManaPHP\Query\QueryInterface;
+use ManaPHP\Http\Router\Attribute\GetMapping;
+use ManaPHP\Http\Router\Attribute\PostMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
+use ManaPHP\Persistence\Page;
+use ManaPHP\Persistence\Restrictions;
+use ManaPHP\Query\Paginator;
+use ManaPHP\Viewing\View\Attribute\ViewGetMapping;
+use function str_contains;
 
-#[Authorize('@index')]
+#[Authorize]
+#[RequestMapping('/rbac/admin')]
 class AdminController extends Controller
 {
-    public function indexAction(string $keyword = '', int $page = 1, int $size = 10)
+    #[Autowired] protected AdminRepository $adminRepository;
+    #[Autowired] protected RoleRepository $roleRepository;
+    #[Autowired] protected AdminRoleRepository $adminRoleRepository;
+
+    #[ViewGetMapping]
+    public function indexAction(string $keyword = '', int $page = 1, int $size = 10): Paginator
     {
-        return Admin::select(
-            ['admin_id', 'admin_name', 'status', 'white_ip', 'login_ip', 'login_time', 'email', 'updator_name',
-             'creator_name', 'created_time', 'updated_time']
-        )
-            ->orderBy(['admin_id' => SORT_DESC])
-            ->with(['roles' => 'role_id, display_name'])
-            ->callable(
-                static function (QueryInterface $query) use ($keyword) {
-                    if (str_contains($keyword, '@')) {
-                        $query->whereContains('email', $keyword);
-                    } else {
-                        $query->whereContains(['admin_name', 'email'], $keyword);
-                    }
-                }
-            )->paginate($page, $size);
+        $fields = ['admin_id', 'admin_name', 'status', 'white_ip', 'login_ip', 'login_time',
+                   'email', 'updator_name', 'creator_name', 'created_time', 'updated_time',
+                   'roles' => ['role_id', 'display_name']
+        ];
+
+        $restrictions = Restrictions::of($this->request->all(), ['status']);
+        if (str_contains($keyword, '@')) {
+            $restrictions->contains('email', $keyword);
+        } else {
+            $restrictions->contains(['admin_name', 'email'], $keyword);
+        }
+
+        $orders = ['admin_id' => SORT_DESC];
+
+        return $this->adminRepository->paginate($restrictions, $fields, $orders, Page::of($page, $size));
     }
 
-    public function listAction()
+    #[GetMapping]
+    public function detailAction(int $admin_id): Admin
     {
-        return Admin::kvalues('admin_name');
+        return $this->adminRepository->get($admin_id);
     }
 
-    public function lockAction(int $admin_id)
+    #[GetMapping]
+    public function listAction(): array
     {
-        $admin = Admin::get($admin_id);
+        return $this->adminRepository->dict([], 'admin_name');
+    }
 
-        if ($this->identity->getId() === $admin->admin_id) {
+    #[PostMapping]
+    public function lockAction(int $admin_id): string|Admin
+    {
+        if ($this->identity->getId() === $admin_id) {
             return '不能锁定自己';
         }
 
+        $admin = new Admin();
+
+        $admin->admin_id = $admin_id;
         $admin->status = Admin::STATUS_LOCKED;
 
-        return $admin->update();
+        return $this->adminRepository->update($admin);
     }
 
-    public function activeAction(int $admin_id)
+    #[PostMapping]
+    public function activeAction(int $admin_id): Admin
     {
-        $admin = Admin::get($admin_id);
+        $admin = new Admin();
 
+        $admin->admin_id = $admin_id;
         $admin->status = Admin::STATUS_ACTIVE;
 
-        return $admin->update();
+        return $this->adminRepository->update($admin);
     }
 
-    public function createAction(InputInterface $input, ?int $role_id)
+    #[PostMapping]
+    public function createAction(InputInterface $input, ?int $role_id): Admin
     {
-        $admin = Admin::fillCreate($input->all());
+        $admin = $this->adminRepository->create($input->all());
 
         if ($role_id) {
-            $role = Role::get($role_id);
+            $role = $this->roleRepository->get($role_id);
 
             $adminRole = new AdminRole();
 
@@ -74,31 +102,37 @@ class AdminController extends Controller
             $adminRole->admin_name = $admin->admin_name;
             $adminRole->role_id = $role->role_id;
             $adminRole->role_name = $role->role_name;
-            $adminRole->create();
+
+            $this->adminRoleRepository->create($adminRole);
         }
 
         return $admin;
     }
 
-    public function editAction(int $admin_id, array $role_ids = [], string $password = '')
+    #[PostMapping]
+    public function editAction(int $admin_id, array $role_ids = [], string $password = ''): Admin
     {
-        $admin = Admin::get($admin_id);
+        $admin = new Admin();
 
+        $admin->admin_id = $admin_id;
         $admin->assign($this->request->all(), ['email', 'white_ip']);
 
         if ($password !== '') {
             $admin->password = $password;
         }
 
-        $admin->update();
+        $this->adminRepository->update($admin);
 
-        $old_role_ids = AdminRole::values('role_id', ['admin_id' => $admin->admin_id]);
+        $old_role_ids = $this->adminRoleRepository->values('role_id', ['admin_id' => $admin->admin_id]);
         foreach (array_diff($old_role_ids, $role_ids) as $role_id) {
-            AdminRole::firstOrFail(['admin_id' => $admin->admin_id, 'role_id' => $role_id])->delete();
+            $adminRole = $this->adminRoleRepository->firstOrFail(
+                ['admin_id' => $admin->admin_id, 'role_id' => $role_id]
+            );
+            $this->adminRoleRepository->delete($adminRole);
         }
 
         foreach (array_diff($role_ids, $old_role_ids) as $role_id) {
-            $role = Role::get($role_id);
+            $role = $this->roleRepository->get($role_id);
             $adminRole = new AdminRole();
 
             $adminRole->admin_id = $admin->admin_id;
@@ -106,15 +140,18 @@ class AdminController extends Controller
             $adminRole->role_id = $role->role_id;
             $adminRole->role_name = $role->role_name;
 
-            $adminRole->create();
+            $this->adminRoleRepository->create($adminRole);
         }
 
         return $admin;
     }
 
-    #[AcceptVerbs(['GET'])]
-    public function rolesAction()
+    #[GetMapping]
+    public function rolesAction(): array
     {
-        return Role::lists(['display_name', 'role_name'], ['role_name!=' => ['guest', 'user']]);
+        return $this->roleRepository->all(
+            ['role_name!=' => ['guest', 'user']],
+            ['role_id', 'display_name']
+        );
     }
 }

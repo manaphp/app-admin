@@ -1,62 +1,107 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Rbac\Controllers;
 
-use App\Areas\Rbac\Models\AdminRole;
-use App\Areas\Rbac\Models\Role;
+use App\Areas\Rbac\Entities\Role;
+use App\Areas\Rbac\Repositories\AdminRoleRepository;
+use App\Areas\Rbac\Repositories\RoleRepository;
+use App\Areas\Rbac\Services\RoleService;
 use App\Controllers\Controller;
+use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\Router\Attribute\GetMapping;
+use ManaPHP\Http\Router\Attribute\PostMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
+use ManaPHP\Persistence\Page;
+use ManaPHP\Persistence\Restrictions;
+use ManaPHP\Query\Paginator;
+use ManaPHP\Viewing\View\Attribute\ViewGetMapping;
+use function implode;
 
-#[Authorize('@index')]
+#[Authorize]
+#[RequestMapping('/rbac/role')]
 class RoleController extends Controller
 {
-    public function indexAction(string $keyword = '', int $page = 1, int $size = 10)
+    #[Autowired] protected RoleRepository $roleRepository;
+    #[Autowired] protected AdminRoleRepository $adminRoleRepository;
+    #[Autowired] protected RoleService $roleService;
+
+    #[ViewGetMapping]
+    public function indexAction(string $keyword = '', int $page = 1, int $size = 10): Paginator
     {
-        return Role::select()
-            ->whereContains(['role_name', 'display_name'], $keyword)
-            ->whereNotIn('role_name', ['guest', 'user', 'admin'])
-            ->orderBy(['role_id' => SORT_DESC])
-            ->paginate($page, $size);
+        $restrictions = Restrictions::create()
+            ->contains(['role_name', 'display_name'], $keyword);
+
+        $orders = ['role_id' => SORT_DESC];
+
+        return $this->roleRepository->paginate($restrictions, [], $orders, Page::of($page, $size));
     }
 
-    public function listAction()
+    #[GetMapping]
+    public function listAction(): array
     {
-        return Role::lists(['display_name', 'role_name']);
+        return $this->roleRepository->all([], ['role_id', 'display_name']);
     }
 
-    public function createAction(string $role_name)
+    #[PostMapping]
+    public function createAction(string $role_name): Role
     {
-        $permissions = ',' . implode(',', $this->authorization->buildAllowed($role_name)) . ',';
+        $permissions = ',' . implode(',', $this->roleService->getPermissions($role_name, [])) . ',';
 
-        return Role::fillCreate($this->request->all(), ['permissions' => $permissions]);
+        $role = $this->roleRepository->fill($this->request->all());
+        $role->builtin = 0;
+        $role->permissions = $permissions;
+        return $this->roleRepository->create($role);
     }
 
-    public function editAction(Role $role)
+    #[PostMapping]
+    public function editAction(): Role
     {
-        return $role->fillUpdate($this->request->all());
+        return $this->roleRepository->update($this->request->all());
     }
 
-    public function disableAction(Role $role)
+    #[PostMapping]
+    public function disableAction(int $role_id): Role
     {
+        $role = new Role();
+
+        $role->role_id = $role_id;
         $role->enabled = 0;
 
-        return $role->update();
+        return $this->roleRepository->update($role);
     }
 
-    public function enableAction(Role $role)
+    #[PostMapping]
+    public function enableAction(int $role_id): Role
     {
+        $role = new Role();
+
+        $role->role_id = $role_id;
         $role->enabled = 1;
 
-        return $role->update();
+        return $this->roleRepository->update($role);
     }
 
-    public function deleteAction(Role $role)
+    #[GetMapping]
+    public function detailAction(int $role_id): ?Role
     {
-        if (AdminRole::exists(['role_id' => $role->role_id])) {
+        return $this->roleRepository->first(['role_id' => $role_id]);
+    }
+
+    #[PostMapping]
+    public function deleteAction(int $role_id): string|Role|null
+    {
+        if ($this->adminRoleRepository->exists(['role_id' => $role_id])) {
             return '删除失败: 有用户绑定到此角色';
         }
 
-        return $role->delete();
+        $role = $this->roleRepository->get($role_id);
+        if ($role->builtin) {
+            return '内置角色不能删除';
+        }
+
+        return $this->roleRepository->delete($role);
     }
 }

@@ -1,40 +1,64 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Admin\Controllers;
 
-use App\Areas\Rbac\Models\AdminRole;
-use App\Areas\Rbac\Models\Role;
+use App\Areas\Rbac\Repositories\AdminRoleRepository;
+use App\Areas\Rbac\Repositories\RoleRepository;
 use App\Controllers\Controller;
-use App\Models\Admin;
-use App\Models\AdminLoginLog;
+use App\Entities\Admin;
+use App\Entities\AdminLoginLog;
+use App\Repositories\AdminLoginLogRepository;
+use App\Repositories\AdminRepository;
 use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Di\Attribute\Config;
 use ManaPHP\Helper\Ip;
 use ManaPHP\Helper\Str;
 use ManaPHP\Http\CaptchaInterface;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\ResponseInterface;
+use ManaPHP\Http\Router\Attribute\GetMapping;
+use ManaPHP\Http\Router\Attribute\PostMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
+use ManaPHP\Http\RouterInterface;
+use ManaPHP\Http\SessionInterface;
+use ManaPHP\Viewing\View\Attribute\ViewMapping;
+use function substr;
 
-#[Authorize('*')]
+#[Authorize(Authorize::GUEST)]
+#[RequestMapping('/admin/session')]
 class SessionController extends Controller
 {
     #[Autowired] protected CaptchaInterface $captcha;
+    #[Autowired] protected AdminRepository $adminRepository;
+    #[Autowired] protected RoleRepository $roleRepository;
+    #[Autowired] protected AdminRoleRepository $adminRoleRepository;
+    #[Autowired] protected AdminLoginLogRepository $adminLoginLogRepository;
+    #[Autowired] protected RouterInterface $router;
+    #[Autowired] protected SessionInterface $session;
 
     #[Config] protected string $app_env;
 
-    public function captchaAction()
+    #[GetMapping]
+    public function captchaAction(): ResponseInterface
     {
         return $this->captcha->generate();
     }
 
-    public function loginView()
+    #[ViewMapping('/login')]
+    public function loginAction(): array
     {
-        $this->view->setVar('redirect', $this->request->input('redirect', $this->router->createUrl('/')));
+        $vars = [];
 
-        return $this->view->setVar('admin_name', $this->cookies->get('admin_name'));
+        $vars['redirect'] = $this->request->input('redirect', $this->router->createUrl('/'));
+        $vars['admin_name'] = $this->cookies->get('admin_name');
+
+        return $vars;
     }
 
-    public function loginAction(string $code, string $admin_name, string $password)
+    #[PostMapping('/login')]
+    public function doLoginAction(string $code, string $admin_name, string $password): string|AdminLoginLog
     {
         if (!$udid = $this->cookies->get('CLIENT_UDID')) {
             $this->cookies->set('CLIENT_UDID', Str::random(16), strtotime('10 year'), '/');
@@ -46,7 +70,7 @@ class SessionController extends Controller
             $this->session->remove('captcha');
         }
 
-        $admin = Admin::first(['admin_name' => $admin_name]);
+        $admin = $this->adminRepository->first(['admin_name' => $admin_name]);
         if (!$admin || !$admin->verifyPassword($password)) {
             return '账号或密码不正确';
         }
@@ -66,8 +90,8 @@ class SessionController extends Controller
         if ($admin->admin_id === 1) {
             $roles = ['admin'];
         } else {
-            $roles = AdminRole::values('role_name', ['admin_id' => $admin->admin_id]);
-            $roles = Role::values('role_name', ['enabled' => 1, 'role_name' => $roles]);
+            $roles = $this->adminRoleRepository->values('role_name', ['admin_id' => $admin->admin_id]);
+            $roles = $this->roleRepository->values('role_name', ['enabled' => 1, 'role_name' => $roles]);
         }
 
         $claims = ['admin_id' => $admin->admin_id, 'admin_name' => $admin->admin_name, 'role' => implode(',', $roles)];
@@ -82,7 +106,7 @@ class SessionController extends Controller
         $admin->login_ip = $client_ip;
         $admin->login_time = time();
         $admin->session_id = $session_id;
-        $admin->update();
+        $this->adminRepository->update($admin);
 
         $adminLoginLog = new AdminLoginLog();
 
@@ -90,13 +114,14 @@ class SessionController extends Controller
         $adminLoginLog->admin_name = $admin->admin_name;
         $adminLoginLog->client_ip = $client_ip;
         $adminLoginLog->client_udid = $udid;
-        $adminLoginLog->user_agent = \substr($this->request->header('user-agent'), 0, 255);
+        $adminLoginLog->user_agent = substr($this->request->header('user-agent'), 0, 255);
 
-        $adminLoginLog->create();
+        return $this->adminLoginLogRepository->create($adminLoginLog);
     }
 
-    #[Authorize('user')]
-    public function logoutAction()
+    #[Authorize(Authorize::USER)]
+    #[GetMapping(['/logout', '/admin/session/logout'])]
+    public function logoutAction(): ResponseInterface
     {
         $this->session->destroy();
 

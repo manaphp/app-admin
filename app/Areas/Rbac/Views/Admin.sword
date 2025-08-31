@@ -1,48 +1,75 @@
-<request-form>
-    <request-text prop="keyword" placeholder="用户名或邮箱"></request-text>
-</request-form>
-<create-form>
-    <create-text prop="admin_name"></create-text>
-    <create-text prop="email"></create-text>
-    <create-text prop="password"></create-text>
-    <create-text prop="white_ip"></create-text>
-    <create-select prop="role_id" :data="roles"></create-select>
-    <create-radio prop="status" :data="statuses"></create-radio>
-</create-form>
+<m-navbar>
+    <mb-create></mb-create>
+    <m-text prop="keyword" placeholder="用户名或邮箱"></m-text>
+    <m-select prop="status" data="statuses"></m-select>
+</m-navbar>
 
-<edit-form>
-    <edit-text prop="admin_name" disabled></edit-text>
-    <edit-text prop="email"></edit-text>
-    <edit-text prop="password"></edit-text>
-    <edit-text prop="white_ip"></edit-text>
+<m-dialog mode="create">
+    <m-text prop="admin_name"></m-text>
+    <m-text prop="email"></m-text>
+    <m-text prop="password"></m-text>
+    <m-text prop="white_ip"></m-text>
+    <m-select prop="role_id" data="roles"></m-select>
+    <m-radio prop="status" data="statuses"></m-radio>
+</m-dialog>
+
+<m-dialog mode="edit">
+    <m-text prop="admin_name" disabled></m-text>
+    <m-text prop="email"></m-text>
+    <m-text prop="password"></m-text>
+    <m-text prop="white_ip"></m-text>
     <el-checkbox-group v-model="edit.role_ids" style="padding: 30px 50px;">
         <el-checkbox v-for="role in roles" :label="role.role_id"
                      :key="role.role_id" style="width: 20%; text-align: left">
             @{{role.display_name}}
         </el-checkbox>
     </el-checkbox-group>
-</edit-form>
-<result-table>
-    <result-index></result-index>
-    <result-account prop="admin_name"></result-account>
-    <result-email></result-email>
-    <result-column prop="status" width="100" v-slot="{row}">@{{ statuses[row.status] }}</result-column>
-    <result-tag prop="roles"></result-tag>
-    <result-ip prop="login_ip"></result-ip>
-    <result-timestamp prop="login_time"></result-timestamp>
-    <result-timestamp prop="created_time"></result-timestamp>
-    <result-op v-slot="{row}" width="125">
-        <result-button v-if="row.status==1" @click="do_lock(row)" type="danger" icon="el-icon-lock" title="锁定"></result-button>
-        <result-button v-else="row.status!==1" @click="do_active(row)" type="warning" icon="el-icon-unlock" title="激活"></result-button>
-    </result-op>
-</result-table>
+</m-dialog>
+
+<m-dialog mode="detail">
+    <m-text prop="admin_id"></m-text>
+    <m-text prop="admin_name"></m-text>
+    <m-text prop="email"></m-text>
+    <m-text prop="white_ip"></m-text>
+    <m-text prop="login_ip"></m-text>
+    <m-timestamp prop="login_time"></m-timestamp>
+    <m-timestamp prop="created_time"></m-timestamp>
+</m-dialog>
+
+<m-table>
+    <m-index></m-index>
+    <m-account prop="admin_name"></m-account>
+    <m-email></m-email>
+    <m-tag prop="roles"></m-tag>
+    <m-ip prop="login_ip"></m-ip>
+    <m-timestamp prop="login_time"></m-timestamp>
+    <m-timestamp prop="created_time"></m-timestamp>
+    <m-ops ops="detail,edit,status"></m-ops>
+</m-table>
 @section('script')
     <script>
-
+        Vue.component('mb-status', {
+            props: ['row'],
+            template: `
+<m-button v-if="row.status==1" @click="do_lock(row)" type="danger" icon="el-icon-lock"
+      title="锁定"></m-button>
+<m-button v-else="row.status!==1" @click="do_active(row)" type="warning" icon="el-icon-unlock"
+      title="激活"></m-button>
+            `,
+            methods: {
+                do_lock(row) {
+                    this.ajaxPost("lock", {admin_id: row.admin_id}, () => row.status = 2);
+                },
+                do_active(row) {
+                    this.ajaxPost("active", {admin_id: row.admin_id}, () => row.status = 1);
+                },
+            }
+        });
         vm = new App({
             data: {
                 topic: '用户',
                 request: {
+                    status: '',
                     keyword: '',
                     size: 20,
                     page: 1
@@ -71,15 +98,10 @@
                     login_ip: '登录IP',
                     login_time: '登录时间',
                     roles: '角色',
-                }
+                },
             },
             methods: {
-                do_lock(row) {
-                    this.ajax_post("lock", {admin_id: row.admin_id}, () => row.status = 2);
-                },
-                do_active(row) {
-                    this.ajax_post("active", {admin_id: row.admin_id}, () => row.status = 1);
-                },
+
                 show_edit(row) {
                     this.edit = Object.assign({}, row);
                     this.$set(this.edit, 'role_ids', this._.map(row.roles, 'role_id'));
@@ -87,7 +109,7 @@
                 }
             },
             created() {
-                this.ajax_get('roles', (res) => this.roles = res);
+                this.ajaxGet('roles', (res) => this.roles = res);
             }
         });
     </script>

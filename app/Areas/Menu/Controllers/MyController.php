@@ -1,46 +1,40 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Menu\Controllers;
 
-use App\Areas\Menu\Models\Group;
+use App\Areas\Menu\Repositories\GroupRepository;
 use App\Controllers\Controller;
+use ManaPHP\Di\Attribute\Autowired;
+use ManaPHP\Http\AuthorizationInterface;
 use ManaPHP\Http\Controller\Attribute\Authorize;
-use ManaPHP\Query\QueryInterface;
+use ManaPHP\Http\Router\Attribute\GetMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
 
-#[Authorize('user')]
+#[Authorize(Authorize::USER)]
+#[RequestMapping('/menu/my')]
 class MyController extends Controller
 {
-    public function indexAction()
+    #[Autowired] protected GroupRepository $groupRepository;
+    #[Autowired] protected AuthorizationInterface $authorization;
+
+    #[GetMapping]
+    public function indexAction(): array
     {
-        $groups = Group::select(['group_id', 'group_name', 'icon'])
-            ->orderBy(['display_order' => SORT_DESC, 'group_id' => SORT_ASC])
-            ->with(
-                [
-                    'items' => static function (QueryInterface $query) {
-                        return $query
-                            ->select(['item_id', 'item_name', 'url', 'icon', 'group_id'])
-                            ->orderBy('display_order DESC, item_id ASC');
-                    }
-                ]
-            )
-            ->all();
+        $fields = ['group_id', 'group_name', 'icon',
+                   'items' => ['item_id', 'item_name', 'url', 'icon', 'group_id', 'permission_code']
+        ];
+        $orders = ['display_order' => SORT_DESC, 'group_id' => SORT_ASC];
+
+        $groups = $this->groupRepository->all([], $fields, $orders);
 
         $menu = [];
         foreach ($groups as $group) {
-            $items = $group['items'];
+            $items = $group->items;
             foreach ($items as $k => $item) {
-                $url = $item['url'];
-
-                if (!$url || $url[0] !== '/') {
-                    continue;
-                }
-
-                if (($pos = strpos($url, '?')) !== false) {
-                    $url = substr($url, 0, $pos);
-                }
-
-                if (!$this->authorization->isAllowed($url)) {
+                $permission_code = $item->permission_code;
+                if ($permission_code === '' || !$this->authorization->isAllowed($permission_code)) {
                     unset($items[$k]);
                 }
             }
@@ -49,7 +43,7 @@ class MyController extends Controller
                 continue;
             }
 
-            $group['items'] = array_values($items);
+            $group->items = array_values($items);
             $menu[] = $group;
         }
 

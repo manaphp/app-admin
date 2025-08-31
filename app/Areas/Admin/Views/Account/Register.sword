@@ -36,7 +36,7 @@
     <el-input v-model.trim="request.admin_name" placeholder="用户名" ref="admin_name">
         <template slot="prepend">账号</template>
     </el-input>
-    <el-input v-model.trim="request.email" placeholder="邮箱" ref="admin_name">
+    <el-input v-model.trim="request.email" placeholder="邮箱" ref="email">
         <template slot="prepend">邮箱</template>
     </el-input>
     <el-input v-model.trim="request.password" type="password" placeholder="密码" ref="password">
@@ -93,13 +93,13 @@
                     } else {
                         this.request.code = '';
                         this.captcha_timestamp = Date.now();
-                        this.$alert(res.data.message ? res.data.message : res.data, '失败');
+                        this.$alert(res.data.msg ? res.data.msg : res.data, '失败');
                     }
                 }).catch((error) => {
                     this.captcha_timestamp = Date.now();
 
-                    if (error.response.data.message) {
-                        this.$alert(error.response.data.message, '失败');
+                    if (error.response.data.msg) {
+                        this.$alert(error.response.data.msg, '失败');
                     } else {
                         this.$alert(error.response.statusText, '失败');
                     }

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Bos\Controllers;
@@ -7,18 +8,24 @@ use App\Controllers\Controller;
 use ManaPHP\Bos\ClientInterface;
 use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\Router\Attribute\PostMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
+use ManaPHP\Viewing\View\Attribute\ViewGetMapping;
 
-#[Authorize('@index')]
+#[Authorize]
+#[RequestMapping('/bos/bucket')]
 class BucketController extends Controller
 {
     #[Autowired] protected ClientInterface $bosClient;
 
-    public function indexAction()
+    #[ViewGetMapping]
+    public function indexAction(): array
     {
         return $this->bosClient->listBuckets();
     }
 
-    public function createAction($bucket_name, $base_url)
+    #[PostMapping]
+    public function createAction($bucket_name, $base_url): array
     {
         return $this->bosClient->createBucket($bucket_name, $base_url);
     }

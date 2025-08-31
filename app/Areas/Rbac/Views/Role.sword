@@ -1,27 +1,39 @@
-<request-form>
-    <request-text prop="keyword" placeholder="角色"></request-text>
-</request-form>
-<create-form>
-    <create-text prop="role_name"></create-text>
-    <create-text prop="display_name"></create-text>
-    <create-switch prop="enabled"></create-switch>
-</create-form>
+<m-navbar>
+    <mb-create></mb-create>
+    <m-text prop="keyword" placeholder="角色"></m-text>
+</m-navbar>
+<m-dialog mode="create">
+    <m-text prop="role_name"></m-text>
+    <m-text prop="display_name"></m-text>
+    <m-switch prop="enabled"></m-switch>
+</m-dialog>
 
-<edit-form>
-    <edit-text prop="role_id" disabled></edit-text>
-    <edit-text prop="role_name"></edit-text>
-    <edit-text prop="display_name"></edit-text>
-</edit-form>
-<result-table>
-    <result-index></result-index>
-    <result-id prop="role_id"></result-id>
-    <result-column prop="role_name" width="120"></result-column>
-    <result-column prop="display_name" show-overflow-tooltip></result-column>
-    <result-enabled prop="enabled"></result-enabled>
-    <result-account prop="updator_name"></result-account>
-    <result-timestamp prop="updated_time"></result-timestamp>
-    <result-op show-enable show-delete width="180"></result-op>
-</result-table>
+<m-dialog mode="edit">
+    <m-text prop="role_id" disabled></m-text>
+    <m-text prop="role_name"></m-text>
+    <m-text prop="display_name"></m-text>
+</m-dialog>
+
+<m-dialog mode="detail">
+    <m-text prop="role_id"></m-text>
+    <m-text prop="role_name"></m-text>
+    <m-text prop="display_name"></m-text>
+    <m-text prop="enabled"></m-text>
+    <m-text prop="builtin"></m-text>
+    <m-text prop="permissions"></m-text>
+    <m-timestamp prop="updated_time"></m-timestamp>
+</m-dialog>
+<m-table>
+    <m-index></m-index>
+    <m-id prop="role_id"></m-id>
+    <m-text prop="role_name" width="120"></m-text>
+    <m-text prop="display_name" show-overflow-tooltip></m-text>
+    <m-enabled prop="enabled"></m-enabled>
+    <m-text prop="builtin"></m-text>
+    <m-account prop="updator_name"></m-account>
+    <m-timestamp prop="updated_time"></m-timestamp>
+    <m-ops ops="detail,edit,enable,delete"></m-ops>
+</m-table>
 @section('script')
     <script>
 
@@ -47,6 +59,7 @@
                 label: {
                     role_id: '角色ID',
                     role_name: '角色名称',
+                    permissions: "权限",
                 }
             }
         });

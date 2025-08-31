@@ -1,22 +1,24 @@
-<request-form>
-    <request-button @click="do_rebuild" type="primary" icon="el-icon-refresh">重新扫描</request-button>
-    <selector v-model="filter.handler" :data="handlers"></selector>
-</request-form>
-<edit-form>
-    <edit-text prop="permission_id" disabled></edit-text>
-    <edit-text prop="handler" disabled></edit-text>
-    <edit-text prop="display_name"></edit-text>
-</edit-form>
-<result-table :data="filteredResponse">
-    <result-index></result-index>
-    <result-id prop="permission_id"></result-id>
-    <result-column prop="handler" width="200"></result-column>
-    <result-tag prop="roles"></result-tag>
-    <result-column prop="display_name" show-overflow-tooltip></result-column>
-    <result-timestamp prop="updated_time"></result-timestamp>
-    <result-timestamp prop="created_time"></result-timestamp>
-    <result-op show-delete width="125"></result-op>
-</result-table>
+<m-navbar>
+    <m-button @click="do_rebuild" type="primary" icon="el-icon-refresh">重新扫描</m-button>
+    <m-selector filterable v-model="filter.permission_code" :data="permission_codes"></m-selector>
+    <m-selector v-model="filter.grantable" :data="grantables"></m-selector>
+</m-navbar>
+<m-dialog mode="edit">
+    <m-text prop="permission_id" disabled></m-text>
+    <m-text prop="permission_code" disabled></m-text>
+    <m-text prop="authorize" disabled></m-text>
+    <m-text prop="display_name"></m-text>
+</m-dialog>
+<m-table :data="filteredResponse" row-class-name="el-alert el-alert--warning is-light">
+    <m-index></m-index>
+    <m-id prop="permission_id"></m-id>
+    <m-text prop="permission_code" width="200" title="display_name"></m-text>
+    <m-tag prop="roles"></m-tag>
+    <m-text prop="grantable" width="80" label="可授权"></m-text>
+    <m-text prop="authorize" width="100"></m-text>
+    <m-timestamp prop="updated_time"></m-timestamp>
+    <m-ops ops="edit,delete"></m-ops>
+</m-table>
 @section('script')
     <script>
 
@@ -27,57 +29,53 @@
                 response: [],
                 edit: {},
                 filter: {
-                    handler: ''
+                    permission_code: '',
+                    grantable: '',
                 },
                 label: {
                     permission_id: '权限ID',
+                    permission_code: '权限代码',
+                    authorize: '内置授限',
                     roles: '角色列表',
-                }
+                },
+                grantables: {
+                    1: '可授权',
+                    0: '不可授权',
+                },
             },
             computed: {
                 filteredResponse() {
                     let filter = this.filter;
-
-                    if (!filter.handler) {
-                        return this.response;
-                    }
-
-                    let permissions = [];
-                    for (let item of this.response) {
-                        if (filter.handler !== '' && item.handler !== filter.handler && item.handler.indexOf(filter.handler + '/') !== 0 && filter.handler !== '/') {
-                            continue;
+                    return this.response.filter(v => {
+                        if (filter.permission_code !== '' && !v.permission_code.startsWith(filter.permission_code + ':')) {
+                            return false;
+                        }
+                        if (filter.grantable !== '' && v.grantable != filter.grantable) {
+                            return false;
                         }
 
-                        permissions.push(item);
-                    }
-
-                    return permissions;
+                        return true;
+                    });
                 },
-                handlers() {
-                    let handlers = [];
+                permission_codes() {
+                    let permission_codes = [];
                     for (let item of this.response) {
-                        let handler = item.handler;
-                        let pos = 0;
-                        while ((pos = handler.indexOf('/', pos + 1)) !== -1) {
-                            let sub = handler.substring(0, pos);
-                            if (handlers.indexOf(sub) === -1) {
-                                handlers.push(sub);
+                        let permission_code = item.permission_code;
+
+                        let pos = permission_code.indexOf(':');
+                        if (pos !== -1) {
+                            let controller = permission_code.substring(0, pos);
+                            if (!permission_codes.includes(controller)) {
+                                permission_codes.push(controller);
                             }
                         }
                     }
-                    return handlers.sort();
-                }
-            },
-            watch: {
-                'filter.handler': function (newValue) {
-                    if (newValue === '') {
-                        this.request.permission_id = '';
-                    }
+                    return permission_codes.sort();
                 }
             },
             methods: {
                 do_rebuild() {
-                    this.ajax_post("rebuild", {}, () => this.reload());
+                    this.ajaxPost("rebuild", {}, () => this.reload());
                 }
             }
         });

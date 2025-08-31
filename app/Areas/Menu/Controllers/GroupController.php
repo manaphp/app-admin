@@ -1,40 +1,55 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Areas\Menu\Controllers;
 
-use App\Areas\Menu\Models\Group;
+use App\Areas\Menu\Entities\Group;
+use App\Areas\Menu\Repositories\GroupRepository;
 use App\Controllers\Controller;
+use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\Controller\Attribute\Authorize;
+use ManaPHP\Http\Router\Attribute\GetMapping;
+use ManaPHP\Http\Router\Attribute\PostMapping;
+use ManaPHP\Http\Router\Attribute\RequestMapping;
+use ManaPHP\Persistence\Restrictions;
+use ManaPHP\Viewing\View\Attribute\ViewGetMapping;
 
-#[Authorize('@index')]
+#[Authorize]
+#[RequestMapping('/menu/group')]
 class GroupController extends Controller
 {
-    public function indexAction()
+    #[Autowired] protected GroupRepository $groupRepository;
+
+    #[ViewGetMapping]
+    public function indexAction(): array
     {
-        return Group::select()
-            ->whereCriteria($this->request->all(), ['group_id'])
-            ->orderBy(['display_order' => SORT_DESC, 'group_id' => SORT_ASC])
-            ->all();
+        $restrictions = Restrictions::of($this->request->all(), ['group_id']);
+        $orders = ['display_order' => SORT_DESC, 'group_id' => SORT_ASC];
+        return $this->groupRepository->all($restrictions, [], $orders);
     }
 
-    public function listAction()
+    #[GetMapping]
+    public function listAction(): array
     {
-        return Group::all([], ['group_id', 'group_name']);
+        return $this->groupRepository->all([], ['group_id', 'group_name']);
     }
 
-    public function createAction()
+    #[PostMapping]
+    public function createAction(): Group
     {
-        return Group::fillCreate($this->request->all());
+        return $this->groupRepository->create($this->request->all());
     }
 
-    public function editAction(Group $group)
+    #[PostMapping]
+    public function editAction(): Group
     {
-        return $group->fillUpdate($this->request->all());
+        return $this->groupRepository->update($this->request->all());
     }
 
-    public function deleteAction(Group $group)
+    #[PostMapping]
+    public function deleteAction(int $group_id): ?Group
     {
-        return $group->delete();
+        return $this->groupRepository->deleteById($group_id);
     }
 }

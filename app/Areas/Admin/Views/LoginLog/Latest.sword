@@ -1,16 +1,15 @@
-<request-form>
-    <span>登录时间: </span>
-    <request-date prop="created_time"></request-date>
-</request-form>
+<m-navbar>
+    <m-date prop="created_time"></m-date>
+</m-navbar>
 
-<result-table>
-    <result-index></result-index>
-    <result-id prop="login_id"></result-id>
-    <result-ip prop="client_ip"></result-ip>
-    <result-column prop="client_udid" width="150" show-overflow-tooltip></result-column>
-    <result-column prop="user_agent" show-overflow-tooltip></result-column>
-    <result-timestamp prop="created_time"></result-timestamp>
-</result-table>
+<m-table>
+    <m-index></m-index>
+    <m-id prop="login_id"></m-id>
+    <m-ip prop="client_ip"></m-ip>
+    <m-text prop="client_udid" width="150" show-overflow-tooltip></m-text>
+    <m-text prop="user_agent" show-overflow-tooltip></m-text>
+    <m-timestamp prop="created_time"></m-timestamp>
+</m-table>
 @section('script')
     <script>
         vm = new App({

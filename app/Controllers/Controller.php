@@ -1,9 +1,9 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Controllers;
 
-class Controller extends \ManaPHP\Mvc\Controller
+class Controller extends \ManaPHP\Http\Controller
 {
-
 }

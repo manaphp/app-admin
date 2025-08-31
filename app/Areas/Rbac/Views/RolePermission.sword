@@ -1,31 +1,36 @@
-<request-form>
-    <show-edit></show-edit>
-    <request-select prop="role_id" :data="roles2"></request-select>
-</request-form>
-<edit-form>
+<m-navbar>
+    <mb-edit :disabled="editDisabled"></mb-edit>
+    <el-select v-model="request.role_id" placeholder="请选择" size="mini">
+        <el-option
+                v-for="role in roles"
+                :key="role.role_id"
+                :label="role.display_name"
+                :value="String(role.role_id)">
+        </el-option>
+    </el-select>
+</m-navbar>
+<m-dialog mode="edit">
     <el-checkbox-group v-model="edit.permission_ids">
         <el-checkbox v-for="permission in permissions" :label="permission.permission_id"
-                     :key="permission.permission_id" style="width: 20%; text-align: left">
-            @{{permission.display_name}}
+                     :key="permission.permission_id" style="width: 40%; text-align: left"
+                     :title="permission.display_name">
+            @{{permission.permission_code}}
         </el-checkbox>
     </el-checkbox-group>
-</edit-form>
-<result-table>
-    <result-index></result-index>
-    <result-column prop="id" width="50"></result-column>
-    <result-link prop="permission_id" href="/rbac/permission" width="50"></result-link>
-    <result-column prop="permission.handler" width="200"></result-column>
-    <result-column prop="roles" width="300" v-slot="{row}">
+</m-dialog>
+<m-table>
+    <m-index></m-index>
+    <m-link prop="permission_id" href="/rbac/permission" width="50"></m-link>
+    <m-text prop="permission_code" width="200"></m-text>
+    <m-text prop="roles" width="300" v-slot="{row}">
         <el-button size="small" v-for="role in row.roles" :key="role.role_id" type="text"
                    @click.native="request.role_id = role.role_id" :disabled="request.role_id == role.role_id"
                    :title="role.role_name">
             @{{ role.display_name }}
         </el-button>
-    </result-column>
-    <result-column prop="permission.display_name" label="显示名称" show-overflow-tooltip></result-column>
-    <result-account prop="creator_name"></result-account>
-    <result-timestamp prop="created_time"></result-timestamp>
-</result-table>
+    </m-text>
+    <m-text prop="display_name" label="显示名称" show-overflow-tooltip></m-text>
+</m-table>
 
 @section('script')
     <script>
@@ -44,30 +49,38 @@
                 label: {
                     permission_id: '权限id',
                     roles: '角色列表',
-                }
-            },
-            computed: {
-                roles2() {
-                    let excludes = ['guest', 'user', 'admin'];
-                    return this.roles.filter(v => !excludes.includes(v.role_name));
-                }
+                },
             },
             mounted() {
-                this.ajax_get("role/list", (res) => this.roles = res);
+                this.ajaxGet("roles", (res) => this.roles = res);
+            },
+            computed: {
+                editDisabled() {
+                    let excludes = ['guest', 'user'];
+                    for (let i = 0; i < this.roles.length; i++) {
+                        let role = this.roles[i];
+                        if (role.role_id == this.request.role_id) {
+                            return excludes.includes(role.role_name);
+                        }
+                    }
+                    return false;
+                }
             },
             methods: {
                 show_edit() {
-                    this.edit.permission_ids = this._.map(this.response, 'permission_id');
-                    this.edit.role_id = this.request.role_id;
+                    this.ajaxGet('granted', {role_id: this.request.role_id}, (res) => {
+                        this.edit.permission_ids = res;
+                        this.edit.role_id = this.request.role_id;
 
-                    if (!this.permissions.length) {
-                        this.ajax_get("permission/list", (res) => {
-                            this.permissions = res;
+                        if (!this.permissions.length) {
+                            this.ajaxGet("permissions", (res) => {
+                                this.permissions = res;
+                                this.editVisible = true;
+                            });
+                        } else {
                             this.editVisible = true;
-                        });
-                    } else {
-                        this.editVisible = true;
-                    }
+                        }
+                    })
                 }
             }
         });

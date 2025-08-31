@@ -1,27 +1,28 @@
-<request-form>
-</request-form>
-<create-form>
-    <create-text prop="group_name"></create-text>
-    <create-text prop="display_order"></create-text>
-    <create-text prop="icon"></create-text>
-</create-form>
-<edit-form>
-    <edit-text prop="group_name"></edit-text>
-    <edit-text prop="display_order"></edit-text>
-    <edit-text prop="icon"></edit-text>
-</edit-form>
-<result-table>
-    <result-index></result-index>
-    <result-column prop="group_id" width="50"></result-column>
-    <result-column prop="display_order" width="50"></result-column>
-    <result-column prop="group_name"></result-column>
-    <result-column prop="icon" width="130" show-overflow-tooltip></result-column>
-    <result-account prop="updator_name"></result-account>
-    <result-timestamp prop="updated_time"></result-timestamp>
-    <result-account prop="creator_name"></result-account>
-    <result-timestamp prop="created_time"></result-timestamp>
-    <result-op show-delete width="125"></result-op>
-</result-table>
+<m-navbar>
+    <mb-create></mb-create>
+</m-navbar>
+<m-dialog mode="create">
+    <m-text prop="group_name"></m-text>
+    <m-text prop="display_order"></m-text>
+    <m-text prop="icon"></m-text>
+</m-dialog>
+<m-dialog mode="edit">
+    <m-text prop="group_name"></m-text>
+    <m-text prop="display_order"></m-text>
+    <m-text prop="icon"></m-text>
+</m-dialog>
+<m-table>
+    <m-index></m-index>
+    <m-text prop="group_id" width="50"></m-text>
+    <m-text prop="display_order" width="50"></m-text>
+    <m-text prop="group_name"></m-text>
+    <m-text prop="icon" width="130" show-overflow-tooltip></m-text>
+    <m-account prop="updator_name"></m-account>
+    <m-timestamp prop="updated_time"></m-timestamp>
+    <m-account prop="creator_name"></m-account>
+    <m-timestamp prop="created_time"></m-timestamp>
+    <m-ops ops="edit,delete"></m-ops>
+</m-table>
 @section('script')
     <script>
 

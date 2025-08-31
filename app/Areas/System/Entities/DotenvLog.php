@@ -1,15 +1,17 @@
 <?php
+
 declare(strict_types=1);
 
-namespace App\Areas\System\Models;
+namespace App\Areas\System\Entities;
 
-use App\Models\Model;
-use ManaPHP\Model\Attribute\PrimaryKey;
+use App\Entities\Entity;
+use ManaPHP\Persistence\Attribute\Id;
 
-#[PrimaryKey('id')]
-class DotenvLog extends Model
+class DotenvLog extends Entity
 {
+    #[Id]
     public int $id;
+
     public string $app_id;
     public string $env;
     public int $created_date;

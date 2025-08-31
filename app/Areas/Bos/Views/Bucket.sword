@@ -1,16 +1,16 @@
 <div class="search-box">
-    <show-create></show-create>
+    <mb-create></mb-create>
 </div>
-<create-form>
-    <create-text prop="bucket_name"></create-text>
-    <create-text prop="base_url"></create-text>
-</create-form>
-<result-table>
-    <result-index></result-index>
-    <result-column prop="bucket_name" width="100"></result-column>
-    <result-column prop="base_url" width="300"></result-column>
-    <result-timestamp prop="created_time"></result-timestamp>
-</result-table>
+<m-dialog mode="create">
+    <m-text prop="bucket_name"></m-text>
+    <m-text prop="base_url"></m-text>
+</m-dialog>
+<m-table>
+    <m-index></m-index>
+    <m-text prop="bucket_name" width="100"></m-text>
+    <m-text prop="base_url" width="300"></m-text>
+    <m-timestamp prop="created_time"></m-timestamp>
+</m-table>
 @section('script')
     <script>
         vm = new App({

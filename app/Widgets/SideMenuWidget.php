@@ -1,47 +1,37 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Widgets;
 
-use App\Areas\Menu\Models\Group;
+use App\Areas\Menu\Repositories\GroupRepository;
 use ManaPHP\Di\Attribute\Autowired;
 use ManaPHP\Http\AuthorizationInterface;
-use ManaPHP\Query\QueryInterface;
+use ManaPHP\Persistence\AdditionalRelationCriteria;
+use function array_values;
 
 class SideMenuWidget extends Widget
 {
     #[Autowired] protected AuthorizationInterface $authorization;
+    #[Autowired] protected GroupRepository $groupRepository;
 
-    public function run($vars = [])
+    public function run($vars = []): array
     {
-        $groups = Group::select(['group_id', 'group_name', 'icon'])
-            ->orderBy('display_order DESC, group_id ASC')
-            ->with(
-                [
-                    'items' => static function (QueryInterface $query) {
-                        return $query
-                            ->select(['item_id', 'item_name', 'url', 'icon', 'group_id'])
-                            ->orderBy('display_order DESC, item_id ASC');
-                    }
-                ]
-            )
-            ->all();
+        $fields = ['group_id', 'group_name', 'icon',
+                   'items' => AdditionalRelationCriteria::of(
+                       ['item_id', 'item_name', 'url', 'icon', 'group_id', 'permission_code'],
+                       ['display_order' => SORT_DESC, 'item_id' => SORT_ASC]
+                   )];
+        $orders = ['display_order' => SORT_DESC, 'group_id' => SORT_ASC];
+
+        $groups = $this->groupRepository->all([], $fields, $orders);
 
         $menu = [];
         foreach ($groups as $group) {
-            $items = $group['items'];
+            $items = $group->items;
             foreach ($items as $k => $item) {
-                $url = $item['url'];
-
-                if (!$url || $url[0] !== '/') {
-                    continue;
-                }
-
-                if (($pos = strpos($url, '?')) !== false) {
-                    $url = substr($url, 0, $pos);
-                }
-
-                if (!$this->authorization->isAllowed($url)) {
+                $permission_code = $item->permission_code;
+                if ($permission_code === '' || !$this->authorization->isAllowed($permission_code)) {
                     unset($items[$k]);
                 }
             }
@@ -50,7 +40,7 @@ class SideMenuWidget extends Widget
                 continue;
             }
 
-            $group['items'] = $items;
+            $group->items = array_values($items);
             $menu[] = $group;
         }
 

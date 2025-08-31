@@ -1,32 +1,33 @@
-<request-form>
-    <request-select prop="app_id" :data="apps"></request-select>
-</request-form>
-<create-form>
-    <create-text prop="app_id"></create-text>
-    <create-textarea prop="env" :rows="10"></create-textarea>
-</create-form>
-<edit-form>
-    <edit-text prop="app_id" disabled></edit-text>
-    <edit-textarea prop="env" :rows="10"></edit-textarea>
-</edit-form>
+<m-navbar>
+    <mb-create></mb-create>
+    <m-select prop="app_id" data="apps"></m-select>
+</m-navbar>
+<m-dialog mode="create">
+    <m-text prop="app_id"></m-text>
+    <m-textarea prop="env" :rows="10"></m-textarea>
+</m-dialog>
+<m-dialog mode="edit">
+    <m-text prop="app_id" disabled></m-text>
+    <m-textarea prop="env" :rows="10"></m-textarea>
+</m-dialog>
 
 <div class="result-box">
     <el-table :data="response.current" border size="small">
-        <result-index></result-index>
-        <result-column prop="app_id" width="300"></result-column>
-        <result-column label=".env" v-slot="{row}">
+        <m-index></m-index>
+        <m-text prop="app_id" width="300"></m-text>
+        <m-text label=".env" v-slot="{row}">
             <pre>@{{row.env}}</pre>
-        </result-column>
-        <result-op show-delete></result-op>
+        </m-text>
+        <m-ops ops="delete"></m-ops>
     </el-table>
 
     <el-table :data="response.logs" border size="small">
-        <result-index></result-index>
-        <result-column prop="app_id" width="300"></result-column>
-        <result-column label=".env" v-slot="{row}">
+        <m-index></m-index>
+        <m-text prop="app_id" width="300"></m-text>
+        <m-text label=".env" v-slot="{row}">
             <pre>@{{row.env}}</pre>
-        </result-column>
-        <result-timestamp prop="created_time"></result-timestamp>
+        </m-text>
+        <m-timestamp prop="created_time"></m-timestamp>
     </el-table>
 </div>
 @section('script')
@@ -49,7 +50,7 @@
                 }
             },
             created() {
-                this.ajax_get('apps', (res) => this.apps = res);
+                this.ajaxGet('apps', (res) => this.apps = res);
             }
         });
     </script>

@@ -1,7 +1,8 @@
-<request-form>
-    <request-text prop="keyword" placeholder="用户名"></request-text>
-</request-form>
-<edit-form>
+<m-navbar>
+    <m-select prop="role_id" data="roles"></m-select>
+    <m-text prop="keyword" placeholder="用户名"></m-text>
+</m-navbar>
+<m-dialog mode="edit">
     <el-checkbox-group v-model="edit.role_ids">
         <el-checkbox v-for="role in roles" :label="parseInt(role.role_id)"
                      :key="role.role_id" style="width: 20%; text-align: left"
@@ -9,22 +10,23 @@
             @{{role.display_name}}
         </el-checkbox>
     </el-checkbox-group>
-</edit-form>
+</m-dialog>
 
-<result-table>
-    <result-index></result-index>
-    <result-id prop="admin_id"></result-id>
-    <result-account prop="admin_name"></result-account>
-    <result-tag prop="roles"></result-tag>
-    <result-timestamp prop="created_time"></result-timestamp>
-    <result-op width="65"></result-op>
-</result-table>
+<m-table>
+    <m-index></m-index>
+    <m-id prop="admin_id"></m-id>
+    <m-account prop="admin_name"></m-account>
+    <m-tag prop="roles"></m-tag>
+    <m-timestamp prop="created_time"></m-timestamp>
+    <m-ops ops="edit"></m-ops>
+</m-table>
 @section('script')
     <script>
 
         vm = new App({
             data: {
                 request: {
+                    role_id: '',
                     keyword: '',
                     size: 20,
                     page: 1
@@ -35,7 +37,6 @@
                     admin_id: '',
                     role_ids: []
                 },
-
                 admins: [],
                 roles: [],
                 label: {
@@ -48,7 +49,7 @@
                     this.edit.admin_id = row.admin_id;
                     this.editVisible = true;
                     if (!this.roles.length) {
-                        this.ajax_get("role/list", (res) => {
+                        this.ajaxGet("../role/list", (res) => {
                             this.roles = res;
                             this.editVisible = true;
                         })
@@ -56,7 +57,10 @@
                         this.editVisible = true;
                     }
                 }
-            }
+            },
+            mounted() {
+                this.ajaxGet("roles", (res) => this.roles = res);
+            },
         });
     </script>
 @append
