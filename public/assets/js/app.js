@@ -76,7 +76,7 @@ axios.interceptors.response.use(function (res) {
                     alert(error.response.data.msg);
                     break;
                 case 401:
-                    window.location.href = '/login';
+                    window.location.href = window.BASE_URL + '/login';
                     break;
                 default:
                     alert(error.response.data.msg || '网络错误，请稍后重试: ' + error.response.status);
